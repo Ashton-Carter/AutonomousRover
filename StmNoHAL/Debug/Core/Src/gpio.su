@@ -1,0 +1,2 @@
+../Core/Src/gpio.c:4:6:gpio_init	24	static
+../Core/Src/gpio.c:45:6:set_gpio_pin	16	static

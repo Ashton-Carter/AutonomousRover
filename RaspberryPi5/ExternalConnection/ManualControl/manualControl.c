@@ -5,9 +5,12 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <time.h>
+#include <string.h>
 
+void *socket_lifecycle(void *arg) {
 
-int socket_lifecycle(int port) {
+    struct manualControlArgs *args = (struct manualControlArgs*) arg;
     int socketInt = -1;
     int retries = 0;
 
@@ -19,7 +22,7 @@ int socket_lifecycle(int port) {
 
         if (retries > 2) {
             printf("Retry Limit Hit, Exiting...\n");
-            return -1;
+            return NULL;
         }
 
         printf("Failed to create socket, retrying\n");
@@ -30,25 +33,25 @@ int socket_lifecycle(int port) {
 
     struct sockaddr_in address = {0};
     address.sin_family = AF_INET;
-    address.sin_port = htons(port);
+    address.sin_port = htons(args->port);
     address.sin_addr.s_addr = htonl(INADDR_ANY);
 
     int bindResult = bind(socketInt, (struct sockaddr *)&address, sizeof(address));
     if(bindResult == -1){
-        printf("Error occured binding to port(%i)\n", port);
-        return -1;
+        printf("Error occured binding to port(%i)\n", args->port);
+        return NULL;
     }
 
     int listenResult = listen(socketInt, 1);
     if(listenResult == -1){
         printf("Error occured listening for clents\n");
-        return -1;
+        return NULL;
     }
 
     int clientInt = accept(socketInt, NULL, NULL);
     if (clientInt < 0) {
         printf("Could not accept client connection\n");
-        return -1;
+        return NULL;
     }
 
     char buf[1024];
@@ -57,33 +60,49 @@ int socket_lifecycle(int port) {
         n = (int)recv(clientInt, buf, sizeof(buf) - 1, 0);
         if(n == -1){
             printf("Error Occured\n");
-            return -1;
+            return NULL;
         } else if (n==0) {
             printf("Client Disconnected\n");
-            return 0;
+            return NULL;
         }
 
         printf("%s", buf);
         char command = buf[0];
         if(command == 's'){
-            shutdown_socket();
+            args->command = CLOSE;
+            args->changed = 1;
+            sleep(5);
             break;
         } else if (command == 'm') {
-            move(buf[1]);
+            if(buf[1]=='F'){
+                args->command = FORWARD;
+            }
+            if(buf[1]=='L'){
+                args->command = LEFT;
+            }
+            if(buf[1]=='R'){
+                args->command = RIGHT;
+            }
+            if(buf[1]=='B'){
+                args->command = BACK;
+            }
+            memcpy(args->amount, (uint8_t[]){0x00, 0x96, 0x00}, 3);
+            args->changed = 1;
+            args->last_update = now_ms();
         }
     }
 
     close(clientInt);
     close(socketInt);
 
-    return 0;
+    return NULL;
 }
 
-int move(char direction){
-    printf("Moving:%c\n", direction);
-    return 0;
-}
 
-int shutdown_socket(){
-    return 0;
+
+uint64_t now_ms(){
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000
+         + (uint64_t)ts.tv_nsec / 1000000;
 }

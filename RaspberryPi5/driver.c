@@ -1,8 +1,9 @@
 
-#include "VideoUplink/uplinkServer.h"
-#include "VideoCapture/videoCapture.h"
+#include "C_Video/VideoUplink/uplinkServer.h"
+#include "C_Video/VideoCapture/videoCapture.h"
 #include "globals.h"
 #include "STM32Communication/SPIConnection.h"
+#include "ExternalConnection/ManualControl/manualControl.h"
 
 #include <sys/shm.h>
 #include <pthread.h>
@@ -22,6 +23,7 @@ int main(){
     pthread_t video_stream_t;
     pthread_t video_capture_t;
     pthread_t spi_connection_t;
+    pthread_t manual_control_t;
 
     int sharedMem = shmget(IPC_PRIVATE,  TOTALSHAREDIMAGEMEMORY, IPC_CREAT | 0600);
     char *sharedMemory = shmat(sharedMem, NULL, 0);
@@ -51,19 +53,34 @@ int main(){
         {0x00, 0x00, 0x00, 0x00}
     };
 
+    struct manualControlArgs manArgs = {
+        MANUAL_CONTROL_PORT,
+        0,
+        {0},
+        0,
+        0
+    };
+
+
     pthread_create(&video_capture_t, NULL, start_video_capture, &videoAtrs);
     pthread_create(&video_stream_t, NULL, run_video_server, &atrs);
     pthread_create(&spi_connection_t, NULL, SPIHandler, &spiArgs);
+    pthread_create(&manual_control_t, NULL, socket_lifecycle, &manArgs);
 
-    sleep(5);
-    sendMessage(&spiMutex, spiArgs.transmissionBuffer, (uint8_t[]){0x10, 0x13, 0x38, 0xFF}, spiDirty);
-    sleep(5);
-    sendMessage(&spiMutex, spiArgs.transmissionBuffer, (uint8_t[]){0x11, 0x13, 0x38, 0xFF}, spiDirty);
-    sleep(5);
-    sendMessage(&spiMutex, spiArgs.transmissionBuffer, (uint8_t[]){0x12, 0x13, 0x38, 0xFF}, spiDirty);
-    sleep(5);
-    sendMessage(&spiMutex, spiArgs.transmissionBuffer, (uint8_t[]){0x13, 0x13, 0x38, 0xFF}, spiDirty);
-    sleep(5);
+    while(1){
+        if(manArgs.changed){
+            if (manArgs.command == CLOSE){
+                break;
+            }
+            uint8_t msg[SPI_LEN] = {0};
+            msg[0] = manArgs.command;
+            for(int i = 1; i < SPI_LEN; ++i){
+                msg[i] = manArgs.amount[i-1];
+            }
+            manArgs.changed = 0;
+            sendMessage(&spiMutex, spiArgs.transmissionBuffer, msg, spiDirty);
+        }
+    }
     
     if(shmctl(sharedMem, IPC_RMID, NULL) == -1) {
         printf("ERROR MARKING MEMORY FOR DELETION(Driver)");
