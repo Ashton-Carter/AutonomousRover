@@ -33,10 +33,10 @@ void *SPIHandler(void *arg){
         .bits_per_word = bits,
         .cs_change = 0,
     };
-    int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
-    if (ret < 1) {
-        perror("SPI_IOC_MESSAGE");
-    }
+    // int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+    // if (ret < 1) {
+    //     perror("SPI_IOC_MESSAGE");
+    // }
     while(1){
         if(*(arguments->dirty)){
             pthread_mutex_lock(arguments->SPI_Buffer_Mutex);
@@ -45,6 +45,8 @@ void *SPIHandler(void *arg){
                 perror("MESSAGE FAILURE\n");
             }
             pthread_mutex_unlock(arguments->SPI_Buffer_Mutex);
+            printf("SENT:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
+            printf("RECIEVED:%X, %X, %X, %X\n", receiveBuffer[0], receiveBuffer[1], receiveBuffer[2], receiveBuffer[3]);
             *(arguments->dirty) = 0;
         }
     }

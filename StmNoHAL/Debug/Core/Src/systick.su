@@ -1,0 +1,2 @@
+../Core/Src/systick.c:12:6:SysTick_Handler	4	static
+../Core/Src/systick.c:16:10:get_ms	4	static

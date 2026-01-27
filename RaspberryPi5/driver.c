@@ -20,30 +20,30 @@ struct videoFrame{
 
 
 int main(){
-    pthread_t video_stream_t;
-    pthread_t video_capture_t;
+    // pthread_t video_stream_t;
+    // pthread_t video_capture_t;
     pthread_t spi_connection_t;
     pthread_t manual_control_t;
 
-    int sharedMem = shmget(IPC_PRIVATE,  TOTALSHAREDIMAGEMEMORY, IPC_CREAT | 0600);
-    char *sharedMemory = shmat(sharedMem, NULL, 0);
-    if (sharedMemory == (void *)-1) {
-        printf("ERROR IN DRIVER WITH SHAMAT");
-        perror("shmat");
-        exit(1);
-    }
+    // int sharedMem = shmget(IPC_PRIVATE,  TOTALSHAREDIMAGEMEMORY, IPC_CREAT | 0600);
+    // char *sharedMemory = shmat(sharedMem, NULL, 0);
+    // if (sharedMemory == (void *)-1) {
+    //     printf("ERROR IN DRIVER WITH SHAMAT");
+    //     perror("shmat");
+    //     exit(1);
+    // }
 
-    pthread_mutex_t memoryMutex = PTHREAD_MUTEX_INITIALIZER;
-    struct serverAttributes atrs = {
-        sharedMem,
-        &memoryMutex,
-        9000
-    };
+    // pthread_mutex_t memoryMutex = PTHREAD_MUTEX_INITIALIZER;
+    // struct serverAttributes atrs = {
+    //     sharedMem,
+    //     &memoryMutex,
+    //     9000
+    // };
 
-    struct videoCaptureAttributes videoAtrs = {
-        sharedMem,
-        &memoryMutex
-    };
+    // struct videoCaptureAttributes videoAtrs = {
+    //     sharedMem,
+    //     &memoryMutex
+    // };
     int drt = 0;
     int *spiDirty = &drt;
     pthread_mutex_t spiMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -62,8 +62,8 @@ int main(){
     };
 
 
-    pthread_create(&video_capture_t, NULL, start_video_capture, &videoAtrs);
-    pthread_create(&video_stream_t, NULL, run_video_server, &atrs);
+    // pthread_create(&video_capture_t, NULL, start_video_capture, &videoAtrs);
+    // pthread_create(&video_stream_t, NULL, run_video_server, &atrs);
     pthread_create(&spi_connection_t, NULL, SPIHandler, &spiArgs);
     pthread_create(&manual_control_t, NULL, socket_lifecycle, &manArgs);
 
@@ -82,9 +82,9 @@ int main(){
         }
     }
     
-    if(shmctl(sharedMem, IPC_RMID, NULL) == -1) {
-        printf("ERROR MARKING MEMORY FOR DELETION(Driver)");
-    }
+    // if(shmctl(sharedMem, IPC_RMID, NULL) == -1) {
+    //     printf("ERROR MARKING MEMORY FOR DELETION(Driver)");
+    // }
 
 }
 

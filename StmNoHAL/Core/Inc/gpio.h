@@ -11,7 +11,7 @@
 #include "stm32g4xx.h"
 #include <stdint.h>
 
-#define GPIO_OUPUT 1U
+#define GPIO_OUTPUT 1U
 #define GPIO_ALTERNATIVE 2U
 
 void gpio_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode);

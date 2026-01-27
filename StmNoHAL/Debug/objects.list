@@ -5,4 +5,5 @@
 "./Core/Src/syscalls.o"
 "./Core/Src/sysmem.o"
 "./Core/Src/system_stm32g4xx.o"
+"./Core/Src/systick.o"
 "./Core/Startup/startup_stm32g474retx.o"

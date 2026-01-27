@@ -36,9 +36,20 @@ void gpio_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode){
 
 	//Sets pull up/down behavior
 	port->PUPDR = port->PUPDR & ~(3U << (2*pin));
+	if(mode == GPIO_OUTPUT){
+		//Sets initial behavior of the pin
+		port->ODR = port->ODR & ~(1U << pin);
+	} else if (mode==GPIO_ALTERNATIVE) {
+		if(pin < 8){
+			port->AFR[0] &= ~(0xF << 4*pin);
+			port->AFR[0] |= 5U << 4*pin;
+		} else {
+			port->AFR[1] &= ~(0xF << 4*(pin-8));
+			port->AFR[1] |= 5U << 4*(pin-8);
+		}
 
-	//Sets initial behavior of the pin
-	port->ODR = port->ODR & ~(1U << pin);
+	}
+
 
 }
 
