@@ -10,10 +10,11 @@ cam.start()
 time.sleep(1)
 i = 0
 server = unix_socket_server(ipc_use="PYTHON")
-
-while(i < 5):
-    i += 1
-    array = cam.capture_array()
-    server.send_image(array)
+while(1):
+    typ = server.recv_message()["type"]
+    if(typ == "READY"):
+        array = cam.capture_array()
+        server.send_image(array) 
+    
 
 server.close()

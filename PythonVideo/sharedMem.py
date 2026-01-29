@@ -34,6 +34,17 @@ class unix_socket_server:
         self.conn.sendall(header_bytes)
         self.conn.sendall(array.tobytes())
 
+    def recv_message(self):
+        raw_len = self.conn.recv(4)
+        if not raw_len:
+            return None
+
+        msg_len = struct.unpack("!I", raw_len)[0]
+        msg_bytes = self.conn.recv(msg_len)
+
+        return json.loads(msg_bytes.decode())
+
+
     def close(self):
         self.conn.close()
         self.sock.close()
@@ -66,6 +77,16 @@ class unix_client:
         img_bytes = self._recvall(header["data_len"])
         img = np.frombuffer(img_bytes, dtype=header["dtype"])
         return img.reshape(header["shape"])
+
+    def send_ready(self):
+        msg = {
+            "type": "READY"
+        }
+        msg_bytes = json.dumps(msg).encode()
+
+        self.sock.sendall(struct.pack("!I", len(msg_bytes)))
+        self.sock.sendall(msg_bytes)
+
 
     def close(self):
         self.sock.close()

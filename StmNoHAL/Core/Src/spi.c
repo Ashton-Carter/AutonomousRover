@@ -12,7 +12,6 @@ uint8_t TX_BUFFER[MESSAGE_LEN] = {0xF1, 0xF2, 0xF3, 0xF4};
 
 volatile uint8_t buffer_idx = 0;
 volatile uint8_t dirty = 0;
-uint8_t spiCalled = 0;
 
 void spi_init(SPI_TypeDef *spi){
 	// Enable clock for spi1
@@ -65,18 +64,18 @@ void spi_init(SPI_TypeDef *spi){
 
 	// Enable SPI
 	spi->CR1 |= SPI_CR1_SPE;
-	spi->DR = 0xFF;
 
 }
 
 void SPI1_IRQHandler(void){
-	spiCalled++;
 	uint32_t sr = SPI1->SR;
 
 	if(sr & SPI_SR_RXNE){
 		RX_BUFFER[buffer_idx] = SPI1->DR;
-		SPI1->DR = TX_BUFFER[buffer_idx];
 		buffer_idx = (buffer_idx + 1) % 4;
+		if(!(buffer_idx %2)){
+			SPI1->DR = 0x99;
+		}
 		if (!buffer_idx) {
 			dirty = 1;
 		}
