@@ -1,0 +1,2 @@
+rovermake: driver.c STM32Communication/SPIConnection.c PythonCIPC/pythonIPC.c ExternalConnection/ManualControl/manualControl.c
+	gcc -o rovermake driver.c STM32Communication/SPIConnection.c PythonCIPC/pythonIPC.c ExternalConnection/ManualControl/manualControl.c

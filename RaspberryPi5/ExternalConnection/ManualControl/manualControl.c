@@ -29,7 +29,6 @@ void *socket_lifecycle(void *arg) {
         retries += 1;
         sleep(3);
     }
-    printf("Created Socket\n");
 
     struct sockaddr_in address = {0};
     address.sin_family = AF_INET;
@@ -38,59 +37,71 @@ void *socket_lifecycle(void *arg) {
 
     int bindResult = bind(socketInt, (struct sockaddr *)&address, sizeof(address));
     if(bindResult == -1){
+        perror("bind");
         printf("Error occured binding to port(%i)\n", args->port);
         return NULL;
     }
 
-    int listenResult = listen(socketInt, 1);
-    if(listenResult == -1){
-        printf("Error occured listening for clents\n");
-        return NULL;
-    }
+    int clientInt;
 
-    int clientInt = accept(socketInt, NULL, NULL);
-    if (clientInt < 0) {
-        printf("Could not accept client connection\n");
-        return NULL;
-    }
-
-    char buf[1024];
-    int n;
     while(1){
-        n = (int)recv(clientInt, buf, sizeof(buf) - 1, 0);
-        if(n == -1){
-            printf("Error Occured\n");
-            return NULL;
-        } else if (n==0) {
-            printf("Client Disconnected\n");
-            return NULL;
+        int listenResult = listen(socketInt, 1);
+        if(listenResult == -1){
+            printf("Error occured listening for clents\n");
+            continue;
         }
 
-        printf("%s", buf);
-        char command = buf[0];
-        if(command == 's'){
-            args->command = CLOSE;
-            args->changed = 1;
-            sleep(5);
-            break;
-        } else if (command == 'm') {
-            if(buf[1]=='F'){
-                args->command = FORWARD;
-            }
-            if(buf[1]=='L'){
-                args->command = LEFT;
-            }
-            if(buf[1]=='R'){
-                args->command = RIGHT;
-            }
-            if(buf[1]=='B'){
-                args->command = BACK;
-            }
-            memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
-            args->changed = 1;
-            args->last_update = now_ms();
+        clientInt = accept(socketInt, NULL, NULL);
+        if (clientInt < 0) {
+            printf("Could not accept client connection\n");
+            continue;
         }
+
+        threadStatus.manualControl = 1;
+        printf("MANUAL CONTROL STARTING\n");
+
+        char buf[1024];
+        int n;
+        while(1){
+            n = (int)recv(clientInt, buf, sizeof(buf) - 1, 0);
+            if(n == -1){
+                printf("Error Occured Recieveing Message From Client\n");
+                threadStatus.manualControl = 0;
+                break;
+            } else if (n==0) {
+                printf("Client Disconnected\n");
+                threadStatus.manualControl = 0;
+                break;
+            }
+
+            char command = buf[0];
+            if(command == 's'){
+                args->command = CLOSE;
+                args->changed = 1;
+                threadStatus.manualControl = 0;
+                sleep(5);
+                break;
+            } else if (command == 'm') {
+                if(buf[1]=='F'){
+                    args->command = FORWARD;
+                }
+                if(buf[1]=='L'){
+                    args->command = LEFT;
+                }
+                if(buf[1]=='R'){
+                    args->command = RIGHT;
+                }
+                if(buf[1]=='B'){
+                    args->command = BACK;
+                }
+                memcpy(args->amount, (uint8_t[]){0x00, 0x01, 0x2C}, 3);
+                args->changed = 1;
+            }
+        }
+
     }
+
+    
 
     close(clientInt);
     close(socketInt);
@@ -105,4 +116,20 @@ uint64_t now_ms(){
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000
          + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+int handleManualControl(struct manualControlArgs *args, uint8_t msg[SPI_LEN]){
+    if(args->changed){
+        if (args->command == CLOSE){
+            args->changed = 0;
+            return -1;
+        }
+        msg[0] = args->command;
+        for(int i = 1; i < SPI_LEN; ++i){
+            msg[i] = args->amount[i-1];
+        }
+        args->changed = 0;
+        return 1;
+    }
+    return 0;
 }

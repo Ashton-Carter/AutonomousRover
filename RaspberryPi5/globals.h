@@ -2,12 +2,8 @@
 #define GLOBALS_H
 
 #include <stddef.h>
+#include <stdint.h>
 
-#define MAX_IMAGE 100000
-#define MAX_IMAGE_HEIGHT 480
-#define MAX_IMAGE_WIDTH 640
-#define TOTALSHAREDIMAGEMEMORY (sizeof(size_t) + MAX_IMAGE)
-#define IMAGE_READ_AMOUNT 16000
 #define SPI_BITS 8
 #define SPI_LEN 4
 #define SPI_SPEED 1000000
@@ -17,6 +13,15 @@
 #define BACK 0x13
 #define CLOSE 0xFF
 #define MANUAL_CONTROL_PORT 8000
+#define UNIX_DOMAIN_SOCKET_PATH "../tmp/rover.sock"
+#define SPI_BUFFER 5
 
+struct threadStatus{
+    uint8_t manualControl;
+    uint8_t manualConnectionStatus;
+    uint8_t pythonCVConnectionStatus;
+};
+
+extern struct threadStatus threadStatus;
 
 #endif

@@ -14,6 +14,7 @@ void *SPIHandler(void *arg){
     int fd = open("/dev/spidev0.0", O_RDWR);
     if(fd < 0){
         perror("ERROR OPENING SPI FILE\n");
+        return NULL;
     }
 
     uint8_t mode = SPI_MODE_0;
