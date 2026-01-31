@@ -5,16 +5,23 @@
 #include "../globals.h"
 
 struct pythonIPCStruct{
-    uint8_t command;
-    uint8_t amount[SPI_LEN-1];
+    float x;
+    float y;
     uint8_t changed;
-    uint64_t last_update;
 };
+
+// Do not add padding
+#pragma pack(push, 1)
+struct pythonIPCMessage {
+    float x;
+    float y;
+};
+#pragma pack(pop)
+
 
 
 void* start_python_socket(void* args);
 
-int handlePythonControl(struct pythonIPCStruct *shared, uint8_t msg[SPI_LEN]);
 
 
 #endif

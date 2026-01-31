@@ -12,6 +12,10 @@
 #define RIGHT 0x12
 #define BACK 0x13
 #define CLOSE 0xFF
+#define CAMERA_UP 0x01
+#define CAMERA_DOWN 0x02
+#define CAMERA_LEFT 0x03
+#define CAMERA_RIGHT 0x04
 #define MANUAL_CONTROL_PORT 8000
 #define UNIX_DOMAIN_SOCKET_PATH "../tmp/rover.sock"
 #define SPI_BUFFER 5

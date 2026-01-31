@@ -17,7 +17,7 @@ void* start_python_socket(void* args){
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, UNIX_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+    strncpy(addr.sun_path, UNIX_DOMAIN_SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
     unlink(addr.sun_path);
 
@@ -42,10 +42,10 @@ void* start_python_socket(void* args){
         }
 
         while(1) {
-            char buf[1024];
+            struct pythonIPCMessage message;
             int n;
             while(1){
-                n = (int)recv(clientInt, buf, sizeof(buf) - 1, 0);
+                n = (int)recv(client_fd, message, sizeof(message) - 1, 0);
                 if(n == -1){
                     printf("Error Occured Recieveing Message From Python\n");
                     break;
@@ -54,38 +54,13 @@ void* start_python_socket(void* args){
                     break;
                 }
 
-                char command = buf[0];
-                if(command == 's'){
-                    args->command = CLOSE;
-                    args->changed = 1;
-                    threadStatus.manualControl = 0;
-                    sleep(5);
-                    break;
-                } else if (command == 'm') {
-                    if(buf[1]=='F'){
-                        args->command = FORWARD;
-                    }
-                    if(buf[1]=='L'){
-                        args->command = LEFT;
-                    }
-                    if(buf[1]=='R'){
-                        args->command = RIGHT;
-                    }
-                    if(buf[1]=='B'){
-                        args->command = BACK;
-                    }
-                    memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
-                    args->changed = 1;
-                    args->last_update = now_ms();
-                }
+                arguments->x = message.x;
+                arguments->y = message.y;
+                arguments->changed = 1;
+                
             }
         }
 
     }
 
-}
-
-int handlePythonControl(struct pythonIPCStruct *shared, uint8_t msg[SPI_LEN]){
-
-    return 1;
 }

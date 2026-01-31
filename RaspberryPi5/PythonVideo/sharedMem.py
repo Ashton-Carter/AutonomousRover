@@ -5,12 +5,12 @@ import numpy as np
 import struct
 
 PYTHON_COMMUNICATION_PATH = "/tmp/python_shared_mem"
-C_DRIVER_COMMUNICATION_PATH = "/tmp/c_python_shared_mem"
+C_DRIVER_COMMUNICATION_PATH = "../tmp/rover.sock"
 class unix_socket_server:
     def __init__(self, ipc_use):
         if ipc_use == "PYTHON":
             self.path = PYTHON_COMMUNICATION_PATH
-        elif ipc_use == "PI":
+        elif ipc_use == "C":
             self.path = C_DRIVER_COMMUNICATION_PATH
 
         if os.path.exists(self.path):
@@ -55,7 +55,7 @@ class unix_client:
     def __init__(self, ipc_use):
         if ipc_use == "PYTHON":
             self.path = PYTHON_COMMUNICATION_PATH
-        elif ipc_use == "PI":
+        elif ipc_use == "C":
             self.path = C_DRIVER_COMMUNICATION_PATH
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -86,6 +86,9 @@ class unix_client:
 
         self.sock.sendall(struct.pack("!I", len(msg_bytes)))
         self.sock.sendall(msg_bytes)
+
+    def send_struct(self, data):
+        self.sock.sendall(data)
 
 
     def close(self):

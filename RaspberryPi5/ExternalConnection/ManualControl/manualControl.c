@@ -94,7 +94,7 @@ void *socket_lifecycle(void *arg) {
                 if(buf[1]=='B'){
                     args->command = BACK;
                 }
-                memcpy(args->amount, (uint8_t[]){0x00, 0x01, 0x2C}, 3);
+                memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
                 args->changed = 1;
             }
         }
