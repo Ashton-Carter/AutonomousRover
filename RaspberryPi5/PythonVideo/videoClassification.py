@@ -28,7 +28,6 @@ while(1):
         verbose=False
     )
     for box in result[0].boxes:
-        
         if box.conf > 0.7:
             cx_n, cy_n, w_n, h_n = box.xywhn[0].tolist()
 

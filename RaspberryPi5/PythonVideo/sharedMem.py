@@ -5,7 +5,7 @@ import numpy as np
 import struct
 
 PYTHON_COMMUNICATION_PATH = "/tmp/python_shared_mem"
-C_DRIVER_COMMUNICATION_PATH = "../tmp/rover.sock"
+C_DRIVER_COMMUNICATION_PATH = "/tmp/rover.sock"
 class unix_socket_server:
     def __init__(self, ipc_use):
         if ipc_use == "PYTHON":

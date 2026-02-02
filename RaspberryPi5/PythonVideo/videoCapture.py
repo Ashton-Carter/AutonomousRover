@@ -11,7 +11,10 @@ time.sleep(1)
 i = 0
 server = unix_socket_server(ipc_use="PYTHON")
 while(1):
-    typ = server.recv_message()["type"]
+    mes = server.recv_message()
+    if not mes or "type" not in mes:
+        continue
+    typ = mes["type"]
     if(typ == "READY"):
         array = cam.capture_array()
         server.send_image(array) 

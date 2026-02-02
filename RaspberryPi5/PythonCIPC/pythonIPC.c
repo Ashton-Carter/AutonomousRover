@@ -2,6 +2,9 @@
 
 #include <sys/socket.h>
 #include <stdio.h>
+#include <sys/un.h>
+#include <unistd.h>
+
 
 void* start_python_socket(void* args){
     struct pythonIPCStruct *arguments = (struct pythonIPCStruct *) args;
@@ -12,7 +15,7 @@ void* start_python_socket(void* args){
     server_fd = socket(PF_LOCAL, SOCK_STREAM, 0);
     if (server_fd == -1) {
         perror("socket");
-        return;
+        return NULL;
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -22,9 +25,9 @@ void* start_python_socket(void* args){
     unlink(addr.sun_path);
 
     if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("bind");
+        perror("python bind");
         close(server_fd);
-        return;
+        return NULL;
     }
 
     while(1){
@@ -45,7 +48,7 @@ void* start_python_socket(void* args){
             struct pythonIPCMessage message;
             int n;
             while(1){
-                n = (int)recv(client_fd, message, sizeof(message) - 1, 0);
+                n = recv(client_fd, &message, sizeof(message), 0);
                 if(n == -1){
                     printf("Error Occured Recieveing Message From Python\n");
                     break;
@@ -53,10 +56,11 @@ void* start_python_socket(void* args){
                     printf("Python Disconnected\n");
                     break;
                 }
-
+                pthread_mutex_lock(&arguments->pythonMutex);
                 arguments->x = message.x;
                 arguments->y = message.y;
                 arguments->changed = 1;
+                pthread_mutex_unlock(&arguments->pythonMutex);
                 
             }
         }

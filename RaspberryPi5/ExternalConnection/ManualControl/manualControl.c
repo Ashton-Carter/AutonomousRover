@@ -37,8 +37,7 @@ void *socket_lifecycle(void *arg) {
 
     int bindResult = bind(socketInt, (struct sockaddr *)&address, sizeof(address));
     if(bindResult == -1){
-        perror("bind");
-        printf("Error occured binding to port(%i)\n", args->port);
+        perror("manual control bind");
         return NULL;
     }
 

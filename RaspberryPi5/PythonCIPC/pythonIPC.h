@@ -5,6 +5,7 @@
 #include "../globals.h"
 
 struct pythonIPCStruct{
+    pthread_mutex_t pythonMutex;
     float x;
     float y;
     uint8_t changed;

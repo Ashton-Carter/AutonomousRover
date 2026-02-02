@@ -36,13 +36,12 @@ int main(){
         MANUAL_CONTROL_PORT,
         0,
         {0},
-        0,
         0
     };
 
-    pthread_mutex_t pythonMutex = PTHREAD_MUTEX_INITIALIZER; 
+    pthread_mutex_t pMux = PTHREAD_MUTEX_INITIALIZER;
     struct pythonIPCStruct pythonArgs = {
-        pythonMutex,
+        pMux,
         0,
         0,
         0
@@ -61,11 +60,12 @@ int main(){
     float y_offset;
     int x_offset_time;
     int y_offset_time;
+    int messages;
 
     while(1){
         messages = 0;
         if(threadStatus.manualControl){
-            int res = handleManualControl(&manArgs, msg);
+            int res = handleManualControl(&manArgs, msg[0]);
             if (res < 0){
                 printf("SWITCHING TO AUTONOMOUS CONTROL\n");
                 threadStatus.manualControl = 0;
@@ -73,9 +73,11 @@ int main(){
             }
             messages = res;
         } else {
-            if(pythonArgs->changed){
-                x_offset = pythonArgs->x - 0.5;
-                y_offset = -1 * (pythonArgs->y - 0.5);
+            pthread_mutex_lock(&pythonArgs.pythonMutex);
+            if(pythonArgs.changed){
+                printf("X:%f, Y:%f\n", pythonArgs.x, pythonArgs.y);
+                x_offset = pythonArgs.x - 0.5;
+                y_offset = -1 * (pythonArgs.y - 0.5);
                 x_command = CAMERA_RIGHT;
                 y_command = CAMERA_UP;
                 if(x_offset < 0){
@@ -98,11 +100,13 @@ int main(){
                 for(int i = SPI_LEN; i<0; --i){
                     msg[0][i] = ((y_offset_time >> (i*8)) & 0xFF);
                 }
-                messsages = 2;
+                messages = 2;
+                pythonArgs.changed = 0;
             }
+            pthread_mutex_unlock(&pythonArgs.pythonMutex);
         }
         
-        for (i = 0; i < changed; ++i) {
+        for (int i = 0; i < changed; ++i) {
             sendMessage(&spiMutex, spiArgs.transmissionBuffer, msg[i], spiDirty);
         }
     }

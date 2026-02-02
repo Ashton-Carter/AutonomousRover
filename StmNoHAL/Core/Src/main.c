@@ -45,9 +45,9 @@ int main(void)
         currentTime = get_ms();
         for(int i = 0; i < 4; ++i){
         	if(instruction_timers[i] > currentTime){
-        		set_gpio_pin(GPIOC, i + 10, 1);
+        		set_gpio_pin(GPIOC, i + 1, 1);
         	} else {
-        		set_gpio_pin(GPIOC, i + 10, 0);
+        		set_gpio_pin(GPIOC, i + 1, 0);
         	}
         }
     }
