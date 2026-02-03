@@ -4,8 +4,8 @@
  *  Created on: Jan 25, 2026
  *      Author: ashtoncarter
  */
+#include <pin_config.h>
 #include "spi.h"
-#include "gpio.h"
 
 uint8_t RX_BUFFER[MESSAGE_LEN] = {};
 uint8_t TX_BUFFER[MESSAGE_LEN] = {0xF1, 0xF2, 0xF3, 0xF4};
@@ -15,10 +15,10 @@ volatile uint8_t dirty = 0;
 
 void spi_init(SPI_TypeDef *spi){
 	// Enable clock for spi1
-	gpio_init(GPIOA, 4, GPIO_ALTERNATIVE);
-	gpio_init(GPIOA, 5, GPIO_ALTERNATIVE);
-	gpio_init(GPIOA, 6, GPIO_ALTERNATIVE);
-	gpio_init(GPIOA, 7, GPIO_ALTERNATIVE);
+	pin_init(GPIOA, 4, GPIO_ALTERNATIVE, 5);
+	pin_init(GPIOA, 5, GPIO_ALTERNATIVE, 5);
+	pin_init(GPIOA, 6, GPIO_ALTERNATIVE, 5);
+	pin_init(GPIOA, 7, GPIO_ALTERNATIVE, 5);
 
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
@@ -39,7 +39,7 @@ void spi_init(SPI_TypeDef *spi){
 	spi->CR1 &= ~SPI_CR1_LSBFIRST;
 
 	// Clear SSM and clear SSI
-	spi->CR1 &= SPI_CR1_SSM;
+	spi->CR1 &= ~SPI_CR1_SSM;
 	spi->CR1 &= ~SPI_CR1_SSI;
 
 	// Set as slave, PI will be master
@@ -59,11 +59,11 @@ void spi_init(SPI_TypeDef *spi){
 
 
 	// Enable recieve interrupt
-	spi->CR2 |= SPI_CR2_RXNEIE | SPI_CR2_TXEIE;
-	NVIC_EnableIRQ(SPI1_IRQn);
+	spi->CR2 |= SPI_CR2_RXNEIE;
 
 	// Enable SPI
 	spi->CR1 |= SPI_CR1_SPE;
+	NVIC_EnableIRQ(SPI1_IRQn);
 
 }
 

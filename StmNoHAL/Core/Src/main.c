@@ -1,8 +1,12 @@
+#include <pin_config.h>
 #include "stm32g4xx.h"
-#include "gpio.h"
 #include "spi.h"
 #include "systick.h"
 
+#define CAMERA_UP 0x01
+#define CAMERA_DOWN 0x02
+#define CAMERA_LEFT 0x03
+#define CAMERA_RIGHT 0x04
 #define FORWARD 0x10
 #define LEFT 0x11
 #define RIGHT 0x12
@@ -11,8 +15,12 @@
 #define BLUE_LED 10
 #define RED_LED 11
 #define GREEN_LED 12
+#define PRESCALER 15
+#define ARR 19999
 
-static void busy_wait(int ms);
+#define PWN_OUTPUT 0x00
+
+static void wait(int ms);
 void handleMovement(uint8_t Direction);
 void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
 
@@ -23,16 +31,22 @@ int main(void)
 	// Set clock interupt to fire every millisecond
 	SysTick_Config(SystemCoreClock/1000);
 
-    gpio_init(GPIOC, BLUE_LED, GPIO_OUTPUT);
-    gpio_init(GPIOC, RED_LED, GPIO_OUTPUT);
-    gpio_init(GPIOC, GREEN_LED, GPIO_OUTPUT);
-    busy_wait(10);
-//    set_gpio_pin(GPIOC, BLUE_LED, 1);
+	// 0 inconsequential with gpio_output
+    pin_init(GPIOC, BLUE_LED, GPIO_OUTPUT, 0);
+    pin_init(GPIOC, RED_LED, GPIO_OUTPUT, 0);
+    pin_init(GPIOC, GREEN_LED, GPIO_OUTPUT, 0);
+
+    spi_init(SPI1);
+
+    pin_init(GPIOA, PWN_OUTPUT, GPIO_ALTERNATIVE, 1);
+    enable_timer(2, PRESCALER, ARR);
+    wait(500);
+
+
 //    set_gpio_pin(GPIOC, 10, 1);
 //    busy_wait(10000);
 //    set_gpio_pin(GPIOC, 10, 0);
 
-    spi_init(SPI1);
 
     uint32_t currentTime;
     while (1)
@@ -56,15 +70,26 @@ int main(void)
 
 
 
-static void busy_wait(int ms){
-	// Very approximate, do not use for necessary delays
-	volatile int cycles = ms/0.0005;
-	while(--cycles){
+static void wait(int ms){
+	uint32_t end = get_ms() + ms;
+	while(get_ms() < end){
 		__asm__("nop");
 	}
 }
 
 
 void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
-	instruction_timers[RX_BUFFER[0]-0x10] = get_ms() + ((RX_BUFFER[1]<<16) | (RX_BUFFER[2]<<8) | RX_BUFFER[3]);
+	uint32_t amount = ((RX_BUFFER[1]<<16) | (RX_BUFFER[2]<<8) | RX_BUFFER[3]);
+	if (RX_BUFFER[0] >= 0x10){
+		instruction_timers[RX_BUFFER[0]-0x10] = get_ms() + amount;
+		return;
+	}
+	switch(RX_BUFFER[0]){
+	case(CAMERA_LEFT):
+		set_pwm(TIM2, 1500-amount);
+		break;
+	case(CAMERA_RIGHT):
+		set_pwm(TIM2, 1500+amount);
+		break;
+	}
 }

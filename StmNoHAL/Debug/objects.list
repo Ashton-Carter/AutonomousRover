@@ -1,5 +1,5 @@
-"./Core/Src/gpio.o"
 "./Core/Src/main.o"
+"./Core/Src/pin_config.o"
 "./Core/Src/spi.o"
 "./Core/Src/stm32g4xx_it.o"
 "./Core/Src/syscalls.o"

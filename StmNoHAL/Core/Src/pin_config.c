@@ -1,7 +1,7 @@
-#include "gpio.h"
+#include "pin_config.h"
 
 
-void gpio_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode){
+void pin_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode, uint8_t alternative_function){
 
 	// Enable clock on AHB2 bus ENR = enable register
 	uint8_t offset;
@@ -20,7 +20,7 @@ void gpio_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode){
 	} else if (port == GPIOG) {
 		offset = 6;
 	}
-	RCC->AHB2ENR = RCC->AHB2ENR | (0x1UL << offset);
+	RCC->AHB2ENR = RCC->AHB2ENR | (1UL << offset);
 
 
 	//First clear any potential bits from the mode by creating a mask on the bits for port
@@ -42,10 +42,10 @@ void gpio_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode){
 	} else if (mode==GPIO_ALTERNATIVE) {
 		if(pin < 8){
 			port->AFR[0] &= ~(0xF << 4*pin);
-			port->AFR[0] |= 5U << 4*pin;
+			port->AFR[0] |= alternative_function << 4*pin;
 		} else {
 			port->AFR[1] &= ~(0xF << 4*(pin-8));
-			port->AFR[1] |= 5U << 4*(pin-8);
+			port->AFR[1] |= alternative_function << 4*(pin-8);
 		}
 
 	}
@@ -68,3 +68,29 @@ void set_gpio_pin(GPIO_TypeDef *port, uint8_t pin, uint8_t val){
 
 
 }
+
+void enable_timer(uint8_t timer, uint8_t prescaler, uint16_t arr){
+	if(timer < 2){
+		return;
+	}
+	RCC->APB1ENR1 |= 1U << (timer-2);
+	TIM_TypeDef *timr = (TIM_TypeDef *)(APB1PERIPH_BASE + (0x0400UL * (timer-2)));
+
+	timr->CR1 = 0;
+	timr->PSC = prescaler;
+	timr->ARR = arr;
+	timr->CCMR1 &= ~TIM_CCMR1_CC1S;
+	timr->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos);
+	timr->CCMR1 |= TIM_CCMR1_OC1PE;
+	timr->CR1 |= TIM_CR1_ARPE;
+	timr->CCR1 = 1500;
+	timr->EGR |= TIM_EGR_UG;
+	timr->CCER |= TIM_CCER_CC1E;
+	timr->CR1 |= TIM_CR1_CEN;
+
+}
+
+void set_pwm(TIM_TypeDef *timer, uint16_t period){
+		timer->CCR1 = period;
+}
+

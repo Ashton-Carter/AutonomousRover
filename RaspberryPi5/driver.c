@@ -25,10 +25,10 @@ int main(){
    
     int drt = 0;
     int *spiDirty = &drt;
-    pthread_mutex_t spiMutex = PTHREAD_MUTEX_INITIALIZER;
     struct SPIArguments spiArgs = {
         spiDirty,
-        &spiMutex,
+        .SPI_Buffer_Mutex = PTHREAD_MUTEX_INITIALIZER,
+        .cond = PTHREAD_COND_INITIALIZER,
         {0x00, 0x00, 0x00, 0x00}
     };
 
@@ -39,9 +39,8 @@ int main(){
         0
     };
 
-    pthread_mutex_t pMux = PTHREAD_MUTEX_INITIALIZER;
     struct pythonIPCStruct pythonArgs = {
-        pMux,
+        .pythonMutex = PTHREAD_MUTEX_INITIALIZER,
         0,
         0,
         0
@@ -53,7 +52,6 @@ int main(){
     pthread_create(&python_ipc_t, NULL, start_python_socket, &pythonArgs);
 
     uint8_t msg[SPI_BUFFER][SPI_LEN] = {0};
-    uint8_t changed;
     uint8_t x_command;
     uint8_t y_command;
     float x_offset;
@@ -75,7 +73,6 @@ int main(){
         } else {
             pthread_mutex_lock(&pythonArgs.pythonMutex);
             if(pythonArgs.changed){
-                printf("X:%f, Y:%f\n", pythonArgs.x, pythonArgs.y);
                 x_offset = pythonArgs.x - 0.5;
                 y_offset = -1 * (pythonArgs.y - 0.5);
                 x_command = CAMERA_RIGHT;
@@ -91,14 +88,13 @@ int main(){
                 x_offset_time = x_offset * 1000;
                 y_offset_time = y_offset * 1000;
                 msg[0][0] = x_command;
-
-                for(int i = SPI_LEN; i<0; --i){
-                    msg[0][i] = ((x_offset_time >> (i*8)) & 0xFF);
+                for(int i = SPI_LEN-1; i>=1; --i){
+                    msg[0][SPI_LEN-i] = ((x_offset_time >> ((i-1)*8)) & 0xFF);
                 }
 
                 msg[1][0] = y_command;
-                for(int i = SPI_LEN; i<0; --i){
-                    msg[0][i] = ((y_offset_time >> (i*8)) & 0xFF);
+                for(int i = SPI_LEN-1; i>=1; --i){
+                    msg[1][SPI_LEN-i] = ((y_offset_time >> ((i-1)*8)) & 0xFF);
                 }
                 messages = 2;
                 pythonArgs.changed = 0;
@@ -106,8 +102,8 @@ int main(){
             pthread_mutex_unlock(&pythonArgs.pythonMutex);
         }
         
-        for (int i = 0; i < changed; ++i) {
-            sendMessage(&spiMutex, spiArgs.transmissionBuffer, msg[i], spiDirty);
+        for (int i = 0; i < messages; ++i) {
+            sendMessage(&spiArgs.SPI_Buffer_Mutex, &spiArgs.cond, spiArgs.transmissionBuffer, msg[i], spiDirty);
         }
     }
 }

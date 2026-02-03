@@ -39,24 +39,30 @@ void *SPIHandler(void *arg){
     //     perror("SPI_IOC_MESSAGE");
     // }
     while(1){
+        pthread_mutex_lock(&arguments->SPI_Buffer_Mutex);
         if(*(arguments->dirty)){
-            pthread_mutex_lock(arguments->SPI_Buffer_Mutex);
+            
             memcpy(transferBuffer, arguments->transmissionBuffer, SPI_LEN);
             if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                 perror("MESSAGE FAILURE\n");
             }
-            pthread_mutex_unlock(arguments->SPI_Buffer_Mutex);
-            printf("SENT:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
-            printf("RECIEVED:%X, %X, %X, %X\n", receiveBuffer[0], receiveBuffer[1], receiveBuffer[2], receiveBuffer[3]);
+            
             *(arguments->dirty) = 0;
+            pthread_cond_signal(&arguments->cond);
         }
+        pthread_mutex_unlock(&arguments->SPI_Buffer_Mutex);
+
     }
     close(fd);
     return 0;
 }
 
-int sendMessage(pthread_mutex_t *spiMutex, uint8_t spiTransmissionBuffer[SPI_LEN], uint8_t msg[SPI_LEN], int *dirty){
+int sendMessage(pthread_mutex_t *spiMutex, pthread_cond_t *cond, uint8_t spiTransmissionBuffer[SPI_LEN], uint8_t msg[SPI_LEN], int *dirty){
+    
     pthread_mutex_lock(spiMutex);
+    while(*dirty){
+        pthread_cond_wait(cond, spiMutex);
+    }
 
     memcpy(spiTransmissionBuffer, msg, SPI_LEN);
     *dirty = 1;
