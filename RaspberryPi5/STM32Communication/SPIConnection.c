@@ -46,7 +46,7 @@ void *SPIHandler(void *arg){
             if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                 perror("MESSAGE FAILURE\n");
             }
-            
+            printf("%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
             *(arguments->dirty) = 0;
             pthread_cond_signal(&arguments->cond);
         }

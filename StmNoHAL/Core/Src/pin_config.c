@@ -83,7 +83,6 @@ void enable_timer(uint8_t timer, uint8_t prescaler, uint16_t arr){
 	timr->CCMR1 |= (6U << TIM_CCMR1_OC1M_Pos);
 	timr->CCMR1 |= TIM_CCMR1_OC1PE;
 	timr->CR1 |= TIM_CR1_ARPE;
-	timr->CCR1 = 1500;
 	timr->EGR |= TIM_EGR_UG;
 	timr->CCER |= TIM_CCER_CC1E;
 	timr->CR1 |= TIM_CR1_CEN;
