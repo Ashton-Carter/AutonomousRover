@@ -9,6 +9,7 @@ C_DRIVER_COMMUNICATION_PATH = "/tmp/rover.sock"
 PYTHON_WEBSOCKET_PATH = "/tmp/websocket.sock"
 class unix_socket_server:
     def __init__(self, ipc_use):
+        self.conn = None
         if ipc_use == "PYTHONCLASSIFICATION":
             self.path = PYTHON_CLASSIFIER_COMMUNICATION_PATH
         elif ipc_use == "C":
@@ -26,6 +27,7 @@ class unix_socket_server:
         self.sock.bind(self.path)
         self.sock.listen(1)
 
+    def block_accept(self):
         self.conn, _ = self.sock.accept()
 
     def _recvall(self, n):
@@ -63,8 +65,10 @@ class unix_socket_server:
 
 
     def close(self):
-        self.conn.close()
-        self.sock.close()
+        if self.conn:
+            self.conn.close()
+        if self.sock:
+            self.sock.close()
         os.remove(self.path)
 
 
@@ -114,4 +118,5 @@ class unix_client:
 
 
     def close(self):
-        self.sock.close()
+        if self.sock:
+            self.sock.close()
