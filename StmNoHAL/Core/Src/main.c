@@ -9,36 +9,59 @@ static void wait(int ms);
 void handleMovement(uint8_t Direction);
 void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
 
-uint32_t instruction_timers[4] = {0};
+uint32_t instruction_timers[INSTRUCTION_TIMERS];
+uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
+
+uint16_t verticalPeriod = MIDPOINT_SERVO;
+uint16_t horizontalPeriod = MIDPOINT_SERVO;
 
 int main(void)
 {
 	// Set clock interupt to fire every millisecond
 	SysTick_Config(SystemCoreClock/1000);
 
+	for (int i = 0; i < INSTRUCTION_TIMERS; ++i){
+		instruction_timers[i] = 0;
+	}
+
+	index_to_gpio_pin[RIGHT_FORWARD_POSITION] = RIGHT_FORWARD;
+	index_to_gpio_pin[RIGHT_BACKWARD_POSITION] = RIGHT_BACKWARD;
+	index_to_gpio_pin[LEFT_FORWARD_POSITION] = LEFT_FORWARD;
+	index_to_gpio_pin[LEFT_BACKWARD_POSITION] = LEFT_BACKWARD;
+	index_to_gpio_pin[FIRE_POSITION] = LASER;
+
 	// 0 inconsequential with gpio_output
     pin_init(GPIOC, RIGHT_BACKWARD, GPIO_OUTPUT, 0);
     pin_init(GPIOC, RIGHT_FORWARD, GPIO_OUTPUT, 0);
     pin_init(GPIOC, LEFT_FORWARD, GPIO_OUTPUT, 0);
     pin_init(GPIOC, LEFT_BACKWARD, GPIO_OUTPUT, 0);
+    pin_init(GPIOC, LASER, GPIO_OUTPUT, 0);
 
     spi_init(SPI1);
 
     pin_init(GPIOA, SERVO_PWM_OUTPUT, GPIO_ALTERNATIVE, 1);
     enable_timer(2, SERVO_PRESCALER, SERVO_ARR);
-    set_pwm(TIM2, 1500);
+    set_pwm(TIM2, MIDPOINT_SERVO);
 
     pin_init(GPIOA, MOTOR_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(3, MOTOR_PRESCALER, MOTOR_ARR);
-    set_pwm(TIM3, 700);
-    set_gpio_pin(GPIOC, 10, 0);
-    set_gpio_pin(GPIOC, 11, 0);
-    set_gpio_pin(GPIOC, 12, 0);
-    set_gpio_pin(GPIOC, 13, 0);
+    set_pwm(TIM3, 600);
+    set_gpio_pin(GPIOC, RIGHT_BACKWARD, 0);
+    set_gpio_pin(GPIOC, RIGHT_FORWARD, 0);
+    set_gpio_pin(GPIOC, LEFT_FORWARD, 0);
+    set_gpio_pin(GPIOC, LEFT_BACKWARD, 0);
+    wait(500);
+
+    pin_init(GPIOB, SERVO2_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
+    enable_timer(4, SERVO_PRESCALER, SERVO_ARR);
+    set_pwm(TIM4, MIDPOINT_SERVO);
+    set_gpio_pin(GPIOC, LASER, 0);
 
 //    set_gpio_pin(GPIOC, 10, 1);
 //    busy_wait(10000);
 //    set_gpio_pin(GPIOC, 10, 0);
+
+    // Max and Min for servo is more like 500 - 2500
 
 
     uint32_t currentTime;
@@ -50,11 +73,11 @@ int main(void)
         }
 
         currentTime = get_ms();
-        for(int i = 0; i < 4; ++i){
+        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
         	if(instruction_timers[i] > currentTime){
-        		set_gpio_pin(GPIOC, i + 10, 1);
+        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 1);
         	} else {
-        		set_gpio_pin(GPIOC, i + 10, 0);
+        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
         	}
         }
     }
@@ -101,11 +124,39 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 		instruction_timers[LEFT_FORWARD_POSITION] = futureTime;
 		instruction_timers[LEFT_BACKWARD_POSITION] = current;
 		break;
+	case(FIRE):
+		instruction_timers[FIRE_POSITION] = futureTime;
 	case(CAMERA_LEFT):
-		set_pwm(TIM2, 1500-amount);
+		horizontalPeriod -= amount;
+		if(horizontalPeriod < MIN_SERVO){
+			horizontalPeriod = MIN_SERVO;
+		}
+
+		set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
 		break;
 	case(CAMERA_RIGHT):
-		set_pwm(TIM2, 1500+amount);
+		horizontalPeriod += amount;
+		if(horizontalPeriod > MAX_SERVO){
+			horizontalPeriod = MAX_SERVO;
+		}
+
+		set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
+		break;
+	case(CAMERA_UP):
+		verticalPeriod -= amount;
+		if(verticalPeriod < MIN_SERVO){
+			verticalPeriod = MIN_SERVO;
+		}
+
+		set_pwm(VERTICAL_SERVO, verticalPeriod);
+		break;
+	case(CAMERA_DOWN):
+		verticalPeriod += amount;
+		if(verticalPeriod > MAX_SERVO){
+			verticalPeriod = MAX_SERVO;
+		}
+
+		set_pwm(VERTICAL_SERVO, verticalPeriod);
 		break;
 	}
 }

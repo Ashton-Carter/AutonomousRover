@@ -59,6 +59,7 @@ void* start_python_socket(void* args){
                 pthread_mutex_lock(&arguments->pythonMutex);
                 arguments->x = message.x;
                 arguments->y = message.y;
+                arguments->id = message.id;
                 arguments->changed = 1;
                 pthread_mutex_unlock(&arguments->pythonMutex);
                 

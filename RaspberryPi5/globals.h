@@ -16,6 +16,7 @@
 #define RIGHT 0x07
 #define BACK 0x08
 #define CLOSE 0x09
+#define FIRE 0x0A
 #define MANUAL_CONTROL_PORT 8000
 #define UNIX_DOMAIN_SOCKET_PATH "/tmp/rover.sock"
 #define SPI_BUFFER 5

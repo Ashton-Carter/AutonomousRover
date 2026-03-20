@@ -80,7 +80,8 @@ void *socket_lifecycle(void *arg) {
                 threadStatus.manualControl = 0;
                 sleep(5);
                 break;
-            } else if (command == 'm') {
+            } 
+            if (command == 'm') {
                 if(buf[1]=='F'){
                     args->command = FORWARD;
                 }
@@ -93,9 +94,26 @@ void *socket_lifecycle(void *arg) {
                 if(buf[1]=='B'){
                     args->command = BACK;
                 }
-                memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
-                args->changed = 1;
             }
+            if (command == 'f'){
+                args->command = FIRE;
+            }
+            if (command == 'l'){
+                if(buf[1]=='U'){
+                    args->command = CAMERA_UP;
+                }
+                if(buf[1]=='L'){
+                    args->command = CAMERA_LEFT;
+                }
+                if(buf[1]=='R'){
+                    args->command = CAMERA_RIGHT;
+                }
+                if(buf[1]=='D'){
+                    args->command = CAMERA_DOWN;
+                }
+            }
+            memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
+            args->changed = 1;
         }
 
     }

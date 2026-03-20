@@ -8,6 +8,7 @@ struct pythonIPCStruct{
     pthread_mutex_t pythonMutex;
     float x;
     float y;
+    uint32_t id;
     uint8_t changed;
 };
 
@@ -16,6 +17,7 @@ struct pythonIPCStruct{
 struct pythonIPCMessage {
     float x;
     float y;
+    uint32_t id;
 };
 #pragma pack(pop)
 
