@@ -69,7 +69,17 @@ class unix_socket_server:
             self.conn.close()
         if self.sock:
             self.sock.close()
-        os.remove(self.path)
+        if os.path.exists(self.path):
+            os.remove(self.path)
+    
+    def close_and_rebind(self):
+        self.close()
+        if os.path.exists(self.path):
+            os.remove(self.path)
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.conn = None
+        self.sock.bind(self.path)
+        self.sock.listen(1)
 
 
 class unix_client:

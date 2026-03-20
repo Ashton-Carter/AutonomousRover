@@ -38,6 +38,7 @@ while(1):
             print("CLASSIFICATION CONNECTION DISCONNCTED, BLOCKING WHILE RECONNECTING")
             classification_server.close()
             connect_to_classification()
+            possible_messages[0] = classification_server.conn
             continue
         ready_connection = classification_server
 
@@ -45,7 +46,8 @@ while(1):
         mes = websocket_server.recv_message()
         if not mes:
             print("client disconnected")
-            websocket_server.conn = None
+            websocket_server.close_and_rebind()
+            possible_messages[1] = websocket_server.conn
             continue
         ready_connection = websocket_server
     elif websocket_server.sock in ready:
