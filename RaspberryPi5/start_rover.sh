@@ -46,10 +46,11 @@ tmux send-keys -t $SESSION \
     "cd $PY_DIR && $PY videoClassification.py" C-m
 
 # ─────────────────────────────────────
-# Pane 3: system monitor
+# Pane 3: websocket video server
 # ─────────────────────────────────────
 tmux split-window -v -t $SESSION:0.0
-tmux send-keys -t $SESSION "htop" C-m
+tmux send-keys -t $SESSION \
+    "cd $PY_DIR && $PY externalConnection.py" C-m
 
 # Layout
 tmux select-layout -t $SESSION tiled
