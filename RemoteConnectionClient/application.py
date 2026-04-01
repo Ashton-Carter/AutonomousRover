@@ -21,6 +21,7 @@ class RoverInterface(tk.Tk):
         "Right": b"lR",
         "Down": b"lD",
         "space": b"f",
+        "q": b"s"
     }
 
     def __init__(self) -> None:

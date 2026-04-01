@@ -78,7 +78,7 @@ void *socket_lifecycle(void *arg) {
                 args->command = CLOSE;
                 args->changed = 1;
                 threadStatus.manualControl = 0;
-                sleep(5);
+                printf("SWITCHING TO AUTONOMOUS CONTROL\n");
                 break;
             } 
             if (command == 'm') {

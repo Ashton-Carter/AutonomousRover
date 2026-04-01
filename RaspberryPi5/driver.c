@@ -65,8 +65,6 @@ int main(){
         if(threadStatus.manualControl){
             int res = handleManualControl(&manArgs, msg[0]);
             if (res < 0){
-                printf("SWITCHING TO AUTONOMOUS CONTROL\n");
-                threadStatus.manualControl = 0;
                 continue;
             }
             messages = res;
