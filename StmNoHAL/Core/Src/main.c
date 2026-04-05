@@ -41,7 +41,7 @@ int main(void)
 
     pin_init(GPIOA, SERVO_PWM_OUTPUT, GPIO_ALTERNATIVE, 1);
     enable_timer(2, SERVO_PRESCALER, SERVO_ARR);
-    set_pwm(TIM2, MIDPOINT_SERVO);
+    set_pwm(TIM2, VERTICAL_MAX_SERVO);
 
     pin_init(GPIOA, MOTOR_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(3, MOTOR_PRESCALER, MOTOR_ARR);
@@ -54,7 +54,8 @@ int main(void)
 
     pin_init(GPIOB, SERVO2_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(4, SERVO_PRESCALER, SERVO_ARR);
-    set_pwm(TIM4, MIDPOINT_SERVO);
+    set_pwm(TIM4, VERTICAL_MAX_SERVO);
+    set_tx_buffer(horizontalPeriod, verticalPeriod);
     set_gpio_pin(GPIOC, LASER, 0);
 
 //    set_gpio_pin(GPIOC, 10, 1);
@@ -98,7 +99,7 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 	uint32_t amount = ((RX_BUFFER[1]<<16) | (RX_BUFFER[2]<<8) | RX_BUFFER[3]);
 	uint32_t current = get_ms();
 	uint32_t futureTime = current + amount;
-
+	uint8_t testing = RX_BUFFER[0];
 	switch(RX_BUFFER[0]){
 	case(FORWARD):
 		instruction_timers[LEFT_FORWARD_POSITION] = futureTime;
@@ -126,37 +127,41 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 		break;
 	case(FIRE):
 		instruction_timers[FIRE_POSITION] = futureTime;
-	case(CAMERA_LEFT):
-		horizontalPeriod -= amount;
-		if(horizontalPeriod < MIN_SERVO){
-			horizontalPeriod = MIN_SERVO;
-		}
-
-		set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
 		break;
 	case(CAMERA_RIGHT):
-		horizontalPeriod += amount;
-		if(horizontalPeriod > MAX_SERVO){
-			horizontalPeriod = MAX_SERVO;
+		horizontalPeriod -= amount;
+		if(horizontalPeriod < HORIZONTAL_MIN_SERVO){
+			horizontalPeriod = HORIZONTAL_MIN_SERVO;
 		}
 
 		set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
 		break;
-	case(CAMERA_UP):
-		verticalPeriod -= amount;
-		if(verticalPeriod < MIN_SERVO){
-			verticalPeriod = MIN_SERVO;
+	case(CAMERA_LEFT):
+		horizontalPeriod += amount;
+		if(horizontalPeriod > HORIZONTAL_MAX_SERVO){
+			horizontalPeriod = HORIZONTAL_MAX_SERVO;
 		}
 
-		set_pwm(VERTICAL_SERVO, verticalPeriod);
+		set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
 		break;
 	case(CAMERA_DOWN):
-		verticalPeriod += amount;
-		if(verticalPeriod > MAX_SERVO){
-			verticalPeriod = MAX_SERVO;
+		verticalPeriod -= amount;
+		if(verticalPeriod < VERTICAL_MIN_SERVO){
+			verticalPeriod = VERTICAL_MIN_SERVO;
 		}
 
 		set_pwm(VERTICAL_SERVO, verticalPeriod);
 		break;
+	case(CAMERA_UP):
+		verticalPeriod += amount;
+		if(verticalPeriod > VERTICAL_MAX_SERVO){
+			verticalPeriod = VERTICAL_MAX_SERVO;
+		}
+
+		set_pwm(VERTICAL_SERVO, verticalPeriod);
+		break;
+	default:
+		testing;
 	}
+	set_tx_buffer(horizontalPeriod, verticalPeriod);
 }

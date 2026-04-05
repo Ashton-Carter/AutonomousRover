@@ -112,7 +112,7 @@ void *socket_lifecycle(void *arg) {
                     args->command = CAMERA_DOWN;
                 }
             }
-            memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x64}, 3);
+            memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x20}, 3);
             args->changed = 1;
         }
 
@@ -131,8 +131,7 @@ void *socket_lifecycle(void *arg) {
 uint64_t now_ms(){
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000
-         + (uint64_t)ts.tv_nsec / 1000000;
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
 int handleManualControl(struct manualControlArgs *args, uint8_t msg[SPI_LEN]){

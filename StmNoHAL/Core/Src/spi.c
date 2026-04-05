@@ -13,6 +13,13 @@ uint8_t TX_BUFFER[MESSAGE_LEN] = {0xF1, 0xF2, 0xF3, 0xF4};
 volatile uint8_t buffer_idx = 0;
 volatile uint8_t dirty = 0;
 
+void set_tx_buffer(uint16_t horizontalPWM, uint16_t verticalPWM){
+	for(int i = 0; i < (MESSAGE_LEN/2); ++i){
+		TX_BUFFER[i] = horizontalPWM & (0xFF << (i * 8));
+		TX_BUFFER[i+MESSAGE_LEN/2] = verticalPWM & (0xFF << (i * 8));
+	}
+}
+
 void spi_init(SPI_TypeDef *spi){
 	// Enable clock for spi1
 	pin_init(GPIOA, 4, GPIO_ALTERNATIVE, 5);
@@ -65,6 +72,7 @@ void spi_init(SPI_TypeDef *spi){
 	spi->CR1 |= SPI_CR1_SPE;
 	NVIC_EnableIRQ(SPI1_IRQn);
 
+
 }
 
 void SPI1_IRQHandler(void){
@@ -73,9 +81,9 @@ void SPI1_IRQHandler(void){
 	if(sr & SPI_SR_RXNE){
 		RX_BUFFER[buffer_idx] = SPI1->DR;
 		buffer_idx = (buffer_idx + 1) % 4;
-		if(!(buffer_idx %2)){
-			SPI1->DR = 0x99;
-		}
+
+		SPI1->DR = TX_BUFFER[buffer_idx];
+
 		if (!buffer_idx) {
 			dirty = 1;
 		}

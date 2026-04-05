@@ -1,57 +1,61 @@
 from sharedMem import unix_client
-from PIL import Image
 from ultralytics import YOLO
+from pathlib import Path
+import struct
 
 pythonConn = unix_client(ipc_use="PYTHONCLASSIFICATION")
 cConn = unix_client(ipc_use="C")
-model = YOLO("best.pt")
-model.fuse()
-results = []
-id = 0
 
-import struct
+MODEL_PATH = Path(__file__).resolve().parent / "best_finetuned3.onnx"
+model = YOLO(str(MODEL_PATH))
 
-FMT = "<ffI" # two floats
+FMT = "<ffI"
 SIZE = struct.calcsize(FMT)
 
+detection_streak = 0
 
-while(1):
+while True:
     try:
         pythonConn.send_ready()
         image = pythonConn.recv_image()
-    except:
-        print("videoCapture Closed, exiting...")
+    except Exception as e:
+        print(f"videoCapture closed or recv failed: {e}")
         break
+
     result = model.predict(
         image,
-        imgsz=320,
+        imgsz=416,
         conf=0.5,
         verbose=False
     )
-    if len(result[0].boxes) < 1:
-        id = 0
-    else:
-        id += 1
 
-    for box in result[0].boxes:
-        if box.conf > 0.7:
-            cx_n, cy_n, w_n, h_n = box.xywhn[0].tolist()
+    boxes = result[0].boxes
 
-            #remove after training with negatives
-            if w_n > 0.7 or h_n > 0.7:
-                id = 0
-                continue
+    best_box = None
+    best_conf = -1.0
 
-            # direc = "r" if cx_n > 0.5 else "l"
-            # direc += "d" if cy_n > 0.5 else "u"
-            
+    for box in boxes:
+        conf = float(box.conf[0])
+        if conf <= 0.7:
+            continue
 
-            data = struct.pack(FMT, cx_n, cy_n, id)
-            cConn.send_struct(data)
-            break
-            # results.append((direc, result[0]))
-    # img = Image.fromarray(image, 'RGB')
-    # img.save(f'tstImgs/output_image{i}.png') 
+        cx_n, cy_n, w_n, h_n = box.xywhn[0].tolist()
 
-# for i, dir_result in enumerate(results):
-#     dir_result[1].save(filename=f"./tstImgs/{dir_result[0]}{i}.jpg")
+        # temporary large-box filter
+        if w_n > 0.7 or h_n > 0.7:
+            continue
+
+        if conf > best_conf:
+            best_conf = conf
+            best_box = (cx_n, cy_n)
+
+    if best_box is None:
+        detection_streak = 0
+        continue
+
+    detection_streak += 1
+    cx_n, cy_n = best_box
+
+    data = struct.pack(FMT, cx_n, cy_n, detection_streak)
+    cConn.send_struct(data)
+    print("Sending detection to C, ID:", detection_streak)

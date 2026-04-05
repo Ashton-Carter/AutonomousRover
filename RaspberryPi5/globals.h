@@ -20,6 +20,8 @@
 #define MANUAL_CONTROL_PORT 8000
 #define UNIX_DOMAIN_SOCKET_PATH "/tmp/rover.sock"
 #define SPI_BUFFER 5
+#define HORIZONTAL_TIME_SCALER 250
+#define VERTICAL_TIME_SCALER 250
 
 struct threadStatus{
     uint8_t manualControl;

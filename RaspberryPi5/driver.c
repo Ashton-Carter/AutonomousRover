@@ -16,6 +16,47 @@ struct threadStatus threadStatus= {
     .pythonCVConnectionStatus = 0
 };
 
+void translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x_command, uint8_t* y_command, int* x_offset_time, int* y_offset_time){
+    float x_offset = pythonArgs->x - 0.5;
+    float y_offset = -1 * (pythonArgs->y - 0.5);
+    printf("Y_OFFSET:%f, X_OFFSET:%f\n", y_offset, x_offset);
+    *x_command = CAMERA_RIGHT;
+    *y_command = CAMERA_UP;
+    if(x_offset < 0){
+        *x_command = CAMERA_LEFT;
+        x_offset *= -1;
+    }
+    if(y_offset < 0){
+        *y_command = CAMERA_DOWN;
+        y_offset *= -1;
+    }
+    *x_offset_time = x_offset * HORIZONTAL_TIME_SCALER;
+    *y_offset_time = y_offset * VERTICAL_TIME_SCALER;
+}
+
+void setMessageBuffer(uint8_t msg[SPI_BUFFER][SPI_LEN], uint8_t x_command, uint8_t y_command, int x_offset_time, int y_offset_time, int* messages, int id){
+    msg[0][0] = x_command;
+    for(int i = SPI_LEN-1; i>=1; --i){
+        msg[0][SPI_LEN-i] = ((x_offset_time >> ((i-1)*8)) & 0xFF);
+    }
+
+    msg[1][0] = y_command;
+    for(int i = SPI_LEN-1; i>=1; --i){
+        msg[1][SPI_LEN-i] = ((y_offset_time >> ((i-1)*8)) & 0xFF);
+    }
+
+
+    if(id > 3){
+        msg[2][0] = FIRE;
+        for(int i = SPI_LEN-1; i>=1; --i){
+            msg[2][SPI_LEN-i] = ((150 >> ((i-1)*8)) & 0xFF);
+        }
+        *messages = 3;
+        return;
+    }
+    *messages = 2;
+}
+
 int main(){
     
     pthread_t spi_connection_t;
@@ -51,6 +92,11 @@ int main(){
     pthread_create(&manual_control_t, NULL, socket_lifecycle, &manArgs);
     pthread_create(&python_ipc_t, NULL, start_python_socket, &pythonArgs);
 
+    // struct targetingStatus = {
+    //     int targetingStatus = 0;
+    //     int last
+    // }
+
     uint8_t msg[SPI_BUFFER][SPI_LEN] = {0};
     uint8_t x_command;
     uint8_t y_command;
@@ -59,6 +105,7 @@ int main(){
     int x_offset_time;
     int y_offset_time;
     int messages;
+
 
     while(1){
         messages = 0;
@@ -70,33 +117,16 @@ int main(){
             messages = res;
         } else {
             pthread_mutex_lock(&pythonArgs.pythonMutex);
-            if(pythonArgs.changed){
-                x_offset = pythonArgs.x - 0.5;
-                y_offset = -1 * (pythonArgs.y - 0.5);
-                x_command = CAMERA_RIGHT;
-                y_command = CAMERA_UP;
-                if(x_offset < 0){
-                    x_command = CAMERA_LEFT;
-                    x_offset *= -1;
-                }
-                if(y_offset < 0){
-                    y_command = CAMERA_DOWN;
-                    y_offset *= -1;
-                }
-                x_offset_time = x_offset * 1000;
-                y_offset_time = y_offset * 1000;
-                msg[0][0] = x_command;
-                for(int i = SPI_LEN-1; i>=1; --i){
-                    msg[0][SPI_LEN-i] = ((x_offset_time >> ((i-1)*8)) & 0xFF);
-                }
 
-                msg[1][0] = y_command;
-                for(int i = SPI_LEN-1; i>=1; --i){
-                    msg[1][SPI_LEN-i] = ((y_offset_time >> ((i-1)*8)) & 0xFF);
-                }
-                messages = 2;
+            if(pythonArgs.changed){
+                translateOffsetToControlTimes(&pythonArgs, &x_command, &y_command, &x_offset_time, &y_offset_time);
+                setMessageBuffer(msg, x_command, y_command, x_offset_time, y_offset_time, &messages, pythonArgs.id);
                 pythonArgs.changed = 0;
+                // targetingStatus.cycles_without_contact = 0;
+            } else {
+                // targetingStatus.cycles_without_contact++;
             }
+
             pthread_mutex_unlock(&pythonArgs.pythonMutex);
         }
         

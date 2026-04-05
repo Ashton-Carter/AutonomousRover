@@ -25,6 +25,7 @@ connect_to_classification()
 websocket_server = unix_socket_server(ipc_use="PYTHONWEBSOCKET")
 possible_messages = [classification_server.conn, websocket_server.conn]
 while(1):
+    classification_selected = False
     if not websocket_server.conn:
         possible_messages[1] = websocket_server.sock
     #this blocks until either connection is ready
@@ -41,6 +42,7 @@ while(1):
             possible_messages[0] = classification_server.conn
             continue
         ready_connection = classification_server
+        classification_selected = True
 
     elif websocket_server.conn in ready:
         mes = websocket_server.recv_message()
@@ -60,7 +62,7 @@ while(1):
     typ = mes["type"]
     if(typ == "READY"):
         array = cam.capture_array()
-        ready_connection.send_image(array) 
+        ready_connection.send_image(array)
     
 
 classification_server.close()
