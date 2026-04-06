@@ -46,8 +46,11 @@ void *SPIHandler(void *arg){
             if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                 perror("MESSAGE FAILURE\n");
             }
+            uint16_t horizontal = (uint16_t)receiveBuffer[0] | ((uint16_t)receiveBuffer[1] << 8);
+            uint16_t vertical = (uint16_t)receiveBuffer[2] | ((uint16_t)receiveBuffer[3] << 8);
             printf("TRASMITTED:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
             printf("RECIEVED:%X, %X, %X, %X\n", receiveBuffer[0], receiveBuffer[1], receiveBuffer[2], receiveBuffer[3]);
+            printf("DECODED:horizontal=%u vertical=%u\n", horizontal, vertical);
             *(arguments->dirty) = 0;
             pthread_cond_signal(&arguments->cond);
         }

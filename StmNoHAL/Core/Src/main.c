@@ -12,8 +12,8 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
 uint32_t instruction_timers[INSTRUCTION_TIMERS];
 uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
 
-uint16_t verticalPeriod = MIDPOINT_SERVO;
-uint16_t horizontalPeriod = MIDPOINT_SERVO;
+uint16_t verticalPeriod = VERTICAL_MIN_SERVO;
+uint16_t horizontalPeriod = 500;
 
 int main(void)
 {
@@ -41,9 +41,9 @@ int main(void)
 
     pin_init(GPIOA, SERVO_PWM_OUTPUT, GPIO_ALTERNATIVE, 1);
     enable_timer(2, SERVO_PRESCALER, SERVO_ARR);
-    set_pwm(TIM2, VERTICAL_MAX_SERVO);
+    set_pwm(VERTICAL_SERVO, verticalPeriod);
 
-    pin_init(GPIOA, MOTOR_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
+    pin_init(GPIOB, MOTOR_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(3, MOTOR_PRESCALER, MOTOR_ARR);
     set_pwm(TIM3, 600);
     set_gpio_pin(GPIOC, RIGHT_BACKWARD, 0);
@@ -54,7 +54,7 @@ int main(void)
 
     pin_init(GPIOB, SERVO2_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(4, SERVO_PRESCALER, SERVO_ARR);
-    set_pwm(TIM4, VERTICAL_MAX_SERVO);
+    set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
     set_tx_buffer(horizontalPeriod, verticalPeriod);
     set_gpio_pin(GPIOC, LASER, 0);
 
