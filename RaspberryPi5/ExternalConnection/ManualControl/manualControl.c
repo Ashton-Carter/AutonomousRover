@@ -10,7 +10,7 @@
 
 void *socket_lifecycle(void *arg) {
 
-    struct manualControlArgs *args = (struct manualControlArgs*) arg;
+    manualControlArgs *args = (manualControlArgs*) arg;
     int socketInt = -1;
     int retries = 0;
 
@@ -66,10 +66,12 @@ void *socket_lifecycle(void *arg) {
             if(n == -1){
                 printf("Error Occured Recieveing Message From Client\n");
                 threadStatus.manualControl = 0;
+                close(clientInt);
                 break;
             } else if (n==0) {
                 printf("Client Disconnected\n");
                 threadStatus.manualControl = 0;
+                close(clientInt);
                 break;
             }
 
@@ -78,6 +80,7 @@ void *socket_lifecycle(void *arg) {
                 args->command = CLOSE;
                 args->changed = 1;
                 threadStatus.manualControl = 0;
+                close(clientInt);
                 printf("SWITCHING TO AUTONOMOUS CONTROL\n");
                 break;
             } 
@@ -112,15 +115,13 @@ void *socket_lifecycle(void *arg) {
                     args->command = CAMERA_DOWN;
                 }
             }
-            memcpy(args->amount, (uint8_t[]){0x00, 0x00, 0x20}, 3);
+            args->amount = 50;
             args->changed = 1;
         }
 
     }
 
     
-
-    close(clientInt);
     close(socketInt);
 
     return NULL;
@@ -134,16 +135,16 @@ uint64_t now_ms(){
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
-int handleManualControl(struct manualControlArgs *args, uint8_t msg[SPI_LEN]){
+int handleManualControl(manualControlArgs *args, uint8_t *command, unsigned int *timeOffset){
     if(args->changed){
         if (args->command == CLOSE){
             args->changed = 0;
             return -1;
         }
-        msg[0] = args->command;
-        for(int i = 1; i < SPI_LEN; ++i){
-            msg[i] = args->amount[i-1];
-        }
+
+        *command = args->command;
+        *timeOffset = args->amount;
+        
         args->changed = 0;
         return 1;
     }

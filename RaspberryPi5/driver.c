@@ -16,7 +16,14 @@ struct threadStatus threadStatus= {
     .pythonCVConnectionStatus = 0
 };
 
-void scan(uint8_t* x_command, uint8_t* y_command, int* x_offset_time, int* y_offset_time, targetingInformation *targetingInformation){
+void translateToBuffer(uint8_t buffer[SPI_LEN], uint8_t command, unsigned int time_offset){
+    buffer[0] = command;
+    for(int i = SPI_LEN-1; i>=1; --i){
+        buffer[SPI_LEN-i] = ((time_offset >> ((i-1)*8)) & 0xFF);
+    }
+}
+
+void scan(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int *messagesToSPI){
     if(targetingInformation->last_horizontal_position > HORIZONTAL_MAX_SERVO - (HORIZONTAL_TIME_SCALER/2)){
         targetingInformation->currentScanHorizontal = CAMERA_RIGHT;
     } else if (targetingInformation->last_horizontal_position < HORIZONTAL_MIN_SERVO + (HORIZONTAL_TIME_SCALER/2)){
@@ -29,16 +36,14 @@ void scan(uint8_t* x_command, uint8_t* y_command, int* x_offset_time, int* y_off
         targetingInformation->currentScanVertical = CAMERA_UP;
     }
 
-    *x_command = targetingInformation->currentScanHorizontal;
-    *y_command = targetingInformation->currentScanVertical;
-    *x_offset_time = SCAN_AMOUNT;
-    *y_offset_time = SCAN_AMOUNT;
+    translateToBuffer(toSPITransmission[(*messagesToSPI)++], targetingInformation->currentScanHorizontal, SCAN_AMOUNT);
+    translateToBuffer(toSPITransmission[(*messagesToSPI)++], targetingInformation->currentScanVertical, SCAN_AMOUNT);
 }
 
-void translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x_command, uint8_t* y_command, int* x_offset_time, int* y_offset_time, targetingInformation *targetingInformation){
+int translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x_command, uint8_t* y_command, int* x_offset_time, int* y_offset_time, targetingInformation *targetingInformation){
     targetingInformation->consequtive_tracking_number = pythonArgs->id;
     if(!targetingInformation->consequtive_tracking_number){
-        return;
+        return 0;
     }
     float x_offset = pythonArgs->x - 0.5f;
     float y_offset = -1.0f * (pythonArgs->y - 0.5f);
@@ -55,14 +60,9 @@ void translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* 
     }
     *x_offset_time = (int)(x_offset * HORIZONTAL_TIME_SCALER);
     *y_offset_time = (int)(y_offset * VERTICAL_TIME_SCALER);
+    return 1;
 }
 
-void translateToBuffer(uint8_t buffer[SPI_LEN], uint8_t command, unsigned int time_offset){
-    buffer[0] = command;
-    for(int i = SPI_LEN-1; i>=1; --i){
-        buffer[SPI_LEN-i] = ((time_offset >> ((i-1)*8)) & 0xFF);
-    }
-}
 
 int main(){
     
@@ -73,7 +73,6 @@ int main(){
    
 
     int drt = 0;
-    int *spiDirty = &drt;
     targetingInformation targetingInformation = {
         .last_vertical_position = 0,
         .last_horizontal_position = 0,
@@ -82,27 +81,31 @@ int main(){
         .currentScanHorizontal = CAMERA_LEFT,
         .currentScanVertical = CAMERA_UP
     };
-    struct SPIArguments spiArgs = {
-        spiDirty,
-        .SPI_Buffer_Mutex = PTHREAD_MUTEX_INITIALIZER,
-        .cond = PTHREAD_COND_INITIALIZER,
-        .transmissionBuffer = {0x00, 0x00, 0x00, 0x00},
-        .targetingInformation = &targetingInformation
+    SPIArguments spiArgs = {
+        .trasmissionFreeIndex = 0,
+        .recieveFreeIndex = 0,
+    
+        .transmissionMutex = PTHREAD_MUTEX_INITIALIZER,
+        .recieveMutex = PTHREAD_MUTEX_INITIALIZER,
+        
+        .transmissionBuffer = {0},
+        .recieveBuffer = {0}
     };
 
 
-    struct manualControlArgs manArgs = {
-        MANUAL_CONTROL_PORT,
-        0,
-        {0},
-        0
+    manualControlArgs manArgs = {
+        .port = MANUAL_CONTROL_PORT,
+        .amount = 0,
+        .changed = 0,
+        .command=  0
     };
 
     struct pythonIPCStruct pythonArgs = {
         .pythonMutex = PTHREAD_MUTEX_INITIALIZER,
-        0,
-        0,
-        0
+        .changed = 0,
+        .id = 0,
+        .x = 0,
+        .y = 0
     };
 
 
@@ -110,53 +113,69 @@ int main(){
     pthread_create(&manual_control_t, NULL, socket_lifecycle, &manArgs);
     pthread_create(&python_ipc_t, NULL, start_python_socket, &pythonArgs);
 
-    uint8_t msg[SPI_BUFFER][SPI_LEN] = {0};
+    uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN] = {0};
+    uint8_t fromSPIRecieve[SPI_BUFFER][SPI_LEN] = {0};
+    int messagesFromSPI = 0;
+    int messagesToSPI = 0;
+
     uint8_t x_command;
     uint8_t y_command;
     float x_offset;
     float y_offset;
     int x_offset_time;
     int y_offset_time;
-    int messages;
+    
 
     while(1){
-        messages = 0;
+        messagesFromSPI = 0;
+        messagesToSPI = 0;
+        for(int i = 0; i < SPI_BUFFER; ++i){
+            if(recieveMessage(&spiArgs, fromSPIRecieve[i]) < 1){
+                break;
+            }
+            messagesFromSPI++;
+        }
+
         if(threadStatus.manualControl){
-            int res = handleManualControl(&manArgs, msg[0]);
-            if (res < 0){
+            unsigned int timeOffset;
+            uint8_t command;
+            if (handleManualControl(&manArgs, &command, &timeOffset) < 1){
                 continue;
             }
-            messages = res;
+            translateToBuffer(toSPITransmission[messagesToSPI++], command, timeOffset);
+
         } else {
             pthread_mutex_lock(&pythonArgs.pythonMutex);
             if(pythonArgs.changed){
-                messages = 2;
                 if (pythonArgs.id){
                     targetingInformation.consequtive_classification_without_target = 0;
                 } else {
                     targetingInformation.consequtive_classification_without_target++;
                 }
+
                 if (targetingInformation.consequtive_classification_without_target > 10){
-                    scan(&x_command, &y_command, &x_offset_time, &y_offset_time, &targetingInformation);
+                    scan(&targetingInformation, toSPITransmission, &messagesToSPI);
+    
                 }
 
-                translateOffsetToControlTimes(&pythonArgs, &x_command, &y_command, &x_offset_time, &y_offset_time, &targetingInformation);
+                if(translateOffsetToControlTimes(&pythonArgs, &x_command, &y_command, &x_offset_time, &y_offset_time, &targetingInformation)){
+                    translateToBuffer(toSPITransmission[messagesToSPI++], x_command, x_offset_time);
+                    translateToBuffer(toSPITransmission[messagesToSPI++], y_command, y_offset_time);
+                }
 
                 if(targetingInformation.consequtive_tracking_number > 3){
-                    translateToBuffer(msg[2], FIRE, FIRE_LENGTH);
-                    messages = 3;
+                    translateToBuffer(toSPITransmission[messagesToSPI++], FIRE, FIRE_LENGTH);
                     
                 }
-                translateToBuffer(msg[0], x_command, x_offset_time);
-                translateToBuffer(msg[1], y_command, y_offset_time);
+
                 pythonArgs.changed = 0;
             }
 
             pthread_mutex_unlock(&pythonArgs.pythonMutex);
         }
         
-        for (int i = 0; i < messages; ++i) {
-            sendMessage(&spiArgs, msg[i], spiDirty);
+        for (int i = messagesToSPI-1; i >= 0; --i) {
+            sendMessage(&spiArgs, toSPITransmission[i]);
         }
     }
 }

@@ -10,7 +10,7 @@
 #include "SPIConnection.h"
 
 void *SPIHandler(void *arg){
-    struct SPIArguments *arguments = (struct SPIArguments *)arg;
+    SPIArguments *arguments = (SPIArguments *)arg;
     int fd = open("/dev/spidev0.0", O_RDWR);
     if(fd < 0){
         perror("ERROR OPENING SPI FILE\n");
@@ -29,50 +29,73 @@ void *SPIHandler(void *arg){
     struct spi_ioc_transfer tr = {
         .tx_buf = (unsigned long)&transferBuffer,
         .rx_buf = (unsigned long)&receiveBuffer,
-        .len = 4,
+        .len = SPI_LEN,
         .speed_hz = speed,
         .bits_per_word = bits,
         .cs_change = 0,
     };
-    // int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
-    // if (ret < 1) {
-    //     perror("SPI_IOC_MESSAGE");
-    // }
+    
     while(1){
-        pthread_mutex_lock(&arguments->SPI_Buffer_Mutex);
-        if(*(arguments->dirty)){
-            
-            memcpy(transferBuffer, arguments->transmissionBuffer, SPI_LEN);
-            if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
-                perror("MESSAGE FAILURE\n");
-            }
-            arguments->targetingInformation->last_horizontal_position = (uint16_t)receiveBuffer[0] | ((uint16_t)receiveBuffer[1] << 8);
-            arguments->targetingInformation->last_vertical_position = (uint16_t)receiveBuffer[2] | ((uint16_t)receiveBuffer[3] << 8);
+        pthread_mutex_lock(&arguments->transmissionMutex);
+        pthread_mutex_lock(&arguments->recieveMutex);
 
-            printf("TRASMITTED:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
-            printf("RECIEVED:%X, %X, %X, %X\n", receiveBuffer[0], receiveBuffer[1], receiveBuffer[2], receiveBuffer[3]);
-            printf("DECODED:horizontal=%u vertical=%u\n", arguments->targetingInformation->last_horizontal_position,
-                 arguments->targetingInformation->last_vertical_position);
-            *(arguments->dirty) = 0;
-            pthread_cond_signal(&arguments->cond);
+        if(arguments->trasmissionFreeIndex){
+            for(int i = 0; i < arguments->trasmissionFreeIndex; ++i){
+                if(arguments->recieveFreeIndex >= SPI_BUFFER){
+                    printf("TRANSFER BUFFER OVERFLOW\n");
+                    break;
+                }
+
+                memcpy(transferBuffer, arguments->transmissionBuffer[i], SPI_LEN);
+                if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
+                    perror("MESSAGE FAILURE\n");
+                }
+                printf("TRASMITTED:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
+                if(arguments->recieveFreeIndex >= SPI_BUFFER){
+                    printf("RECIEVE BUFFER OVERFLOW, OVERWRITING FROM INDEX 0\n");
+                    arguments->recieveFreeIndex = 0;
+                }
+                memcpy(arguments->recieveBuffer[arguments->recieveFreeIndex], receiveBuffer, SPI_LEN);
+
+                printf("RECIEVED:%X, %X, %X, %X\n", 
+                    arguments->recieveBuffer[arguments->recieveFreeIndex][0], 
+                    arguments->recieveBuffer[arguments->recieveFreeIndex][1], 
+                    arguments->recieveBuffer[arguments->recieveFreeIndex][2], 
+                    arguments->recieveBuffer[arguments->recieveFreeIndex][3]);
+                arguments->recieveFreeIndex++;
+            }
+            arguments->trasmissionFreeIndex = 0;
         }
-        pthread_mutex_unlock(&arguments->SPI_Buffer_Mutex);
+        pthread_mutex_unlock(&arguments->transmissionMutex);
+        pthread_mutex_unlock(&arguments->recieveMutex);
 
     }
     close(fd);
     return 0;
 }
 
-int sendMessage(struct SPIArguments *arguments, uint8_t msg[SPI_LEN], int *dirty){
+int sendMessage(SPIArguments *arguments, uint8_t msg[SPI_LEN]){
     
-    pthread_mutex_lock(&arguments->SPI_Buffer_Mutex);
-    
-    while(*dirty){
-        pthread_cond_wait(&arguments->cond, &arguments->SPI_Buffer_Mutex);
+    pthread_mutex_lock(&arguments->transmissionMutex);
+    if(arguments->trasmissionFreeIndex >= SPI_BUFFER){
+        pthread_mutex_unlock(&arguments->transmissionMutex);
+        return -1;
     }
+    memcpy(arguments->transmissionBuffer[arguments->trasmissionFreeIndex], msg, SPI_LEN);
+    arguments->trasmissionFreeIndex++;
+    pthread_mutex_unlock(&arguments->transmissionMutex);
+    return SPI_BUFFER - arguments->trasmissionFreeIndex;
+}
 
-    memcpy(arguments->transmissionBuffer, msg, SPI_LEN);
-    *dirty = 1;
-    pthread_mutex_unlock(&(arguments->SPI_Buffer_Mutex));
-    return 1;
+int recieveMessage(SPIArguments *arguments, uint8_t recieveBuffer[SPI_LEN]){
+    
+    pthread_mutex_lock(&arguments->recieveMutex);
+    if(arguments->recieveFreeIndex <= 0){
+        pthread_mutex_unlock(&arguments->recieveMutex);
+        return -1;
+    }
+    memcpy(recieveBuffer, arguments->recieveBuffer[arguments->recieveFreeIndex-1], SPI_LEN);
+    arguments->recieveFreeIndex--;
+    pthread_mutex_unlock(&arguments->recieveMutex);
+    return arguments->recieveFreeIndex;
 }

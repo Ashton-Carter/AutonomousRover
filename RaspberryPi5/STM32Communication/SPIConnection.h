@@ -4,16 +4,22 @@
 #include <stdint.h>
 #include "../globals.h"
 
-struct SPIArguments {
-    int *dirty;
-    pthread_mutex_t SPI_Buffer_Mutex;
-    pthread_cond_t cond;
-    uint8_t transmissionBuffer[SPI_LEN];
-    targetingInformation* targetingInformation;
-};
+typedef struct {
+    
+    int trasmissionFreeIndex;
+    int recieveFreeIndex;
+
+    pthread_mutex_t transmissionMutex;
+    pthread_mutex_t recieveMutex;
+
+    uint8_t transmissionBuffer[SPI_BUFFER][SPI_LEN];
+    uint8_t recieveBuffer[SPI_BUFFER][SPI_LEN];
+
+} SPIArguments;
 
 void *SPIHandler(void *arg);
-int sendMessage(struct SPIArguments *arguments, uint8_t msg[SPI_LEN], int *dirty);
+int sendMessage(SPIArguments *arguments, uint8_t msg[SPI_LEN]);
+int recieveMessage(SPIArguments *arguments, uint8_t recieveBuffer[SPI_LEN]);
 
 
 

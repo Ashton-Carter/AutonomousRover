@@ -4,16 +4,16 @@
 #include <stdint.h>
 #include "../../globals.h"
 
-struct manualControlArgs{
+typedef struct{
     int port;
     uint8_t command;
-    uint8_t amount[SPI_LEN-1];
+    int amount;
     uint8_t changed;
-};
+}manualControlArgs;
 
 uint64_t now_ms();
 void *socket_lifecycle(void *arg);
-int handleManualControl(struct manualControlArgs *args, uint8_t msg[SPI_LEN]);
+int handleManualControl(manualControlArgs *args, uint8_t *command, unsigned int *timeOffset);
 
 
 #endif // SOCKET_LIFECYCLE_H
