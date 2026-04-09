@@ -20,8 +20,23 @@
 #define MANUAL_CONTROL_PORT 8000
 #define UNIX_DOMAIN_SOCKET_PATH "/tmp/rover.sock"
 #define SPI_BUFFER 5
-#define HORIZONTAL_TIME_SCALER 250
-#define VERTICAL_TIME_SCALER 250
+#define HORIZONTAL_TIME_SCALER 450
+#define VERTICAL_TIME_SCALER 450
+#define HORIZONTAL_MIN_SERVO 500
+#define HORIZONTAL_MAX_SERVO 2500
+#define VERTICAL_MIN_SERVO 700
+#define VERTICAL_MAX_SERVO 1200
+#define SCAN_AMOUNT 20
+#define FIRE_LENGTH 150
+
+typedef struct {
+    uint16_t last_vertical_position;
+    uint16_t last_horizontal_position;
+    int consequtive_tracking_number;
+    int consequtive_classification_without_target;
+    uint8_t currentScanHorizontal;
+    uint8_t currentScanVertical;
+} targetingInformation;
 
 struct threadStatus{
     uint8_t manualControl;

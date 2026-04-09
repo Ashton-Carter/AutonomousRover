@@ -46,11 +46,13 @@ void *SPIHandler(void *arg){
             if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                 perror("MESSAGE FAILURE\n");
             }
-            uint16_t horizontal = (uint16_t)receiveBuffer[0] | ((uint16_t)receiveBuffer[1] << 8);
-            uint16_t vertical = (uint16_t)receiveBuffer[2] | ((uint16_t)receiveBuffer[3] << 8);
+            arguments->targetingInformation->last_horizontal_position = (uint16_t)receiveBuffer[0] | ((uint16_t)receiveBuffer[1] << 8);
+            arguments->targetingInformation->last_vertical_position = (uint16_t)receiveBuffer[2] | ((uint16_t)receiveBuffer[3] << 8);
+
             printf("TRASMITTED:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
             printf("RECIEVED:%X, %X, %X, %X\n", receiveBuffer[0], receiveBuffer[1], receiveBuffer[2], receiveBuffer[3]);
-            printf("DECODED:horizontal=%u vertical=%u\n", horizontal, vertical);
+            printf("DECODED:horizontal=%u vertical=%u\n", arguments->targetingInformation->last_horizontal_position,
+                 arguments->targetingInformation->last_vertical_position);
             *(arguments->dirty) = 0;
             pthread_cond_signal(&arguments->cond);
         }
@@ -61,15 +63,16 @@ void *SPIHandler(void *arg){
     return 0;
 }
 
-int sendMessage(pthread_mutex_t *spiMutex, pthread_cond_t *cond, uint8_t spiTransmissionBuffer[SPI_LEN], uint8_t msg[SPI_LEN], int *dirty){
+int sendMessage(struct SPIArguments *arguments, uint8_t msg[SPI_LEN], int *dirty){
     
-    pthread_mutex_lock(spiMutex);
+    pthread_mutex_lock(&arguments->SPI_Buffer_Mutex);
+    
     while(*dirty){
-        pthread_cond_wait(cond, spiMutex);
+        pthread_cond_wait(&arguments->cond, &arguments->SPI_Buffer_Mutex);
     }
 
-    memcpy(spiTransmissionBuffer, msg, SPI_LEN);
+    memcpy(arguments->transmissionBuffer, msg, SPI_LEN);
     *dirty = 1;
-    pthread_mutex_unlock(spiMutex);
+    pthread_mutex_unlock(&(arguments->SPI_Buffer_Mutex));
     return 1;
 }

@@ -13,7 +13,7 @@ uint32_t instruction_timers[INSTRUCTION_TIMERS];
 uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
 
 uint16_t verticalPeriod = VERTICAL_MIN_SERVO;
-uint16_t horizontalPeriod = 500;
+uint16_t horizontalPeriod = MIDPOINT_SERVO;
 
 int main(void)
 {
@@ -99,7 +99,6 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 	uint32_t amount = ((RX_BUFFER[1]<<16) | (RX_BUFFER[2]<<8) | RX_BUFFER[3]);
 	uint32_t current = get_ms();
 	uint32_t futureTime = current + amount;
-	uint8_t testing = RX_BUFFER[0];
 	switch(RX_BUFFER[0]){
 	case(FORWARD):
 		instruction_timers[LEFT_FORWARD_POSITION] = futureTime;
@@ -160,8 +159,6 @@ void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 
 		set_pwm(VERTICAL_SERVO, verticalPeriod);
 		break;
-	default:
-		testing;
 	}
 	set_tx_buffer(horizontalPeriod, verticalPeriod);
 }

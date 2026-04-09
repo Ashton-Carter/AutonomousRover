@@ -13,7 +13,7 @@ FMT = "<ffI"
 SIZE = struct.calcsize(FMT)
 
 detection_streak = 0
-
+sendStreak = 0
 while True:
     try:
         pythonConn.send_ready()
@@ -51,11 +51,12 @@ while True:
 
     if best_box is None:
         detection_streak = 0
-        continue
+        data = struct.pack(FMT, 0.0, 0.0, detection_streak)
 
-    detection_streak += 1
-    cx_n, cy_n = best_box
-
-    data = struct.pack(FMT, cx_n, cy_n, detection_streak)
+    else:
+        detection_streak += 1
+        cx_n, cy_n = best_box
+        data = struct.pack(FMT, cx_n, cy_n, detection_streak)
+    sendStreak += 1
     cConn.send_struct(data)
-    print("Sending detection to C, ID:", detection_streak)
+    print("Sending detection to C, ID:", detection_streak, sendStreak)
