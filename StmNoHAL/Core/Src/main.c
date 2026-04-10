@@ -6,8 +6,7 @@
 
 
 static void wait(int ms);
-void handleMovement(uint8_t Direction);
-void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
+void translateInstructionsAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
 
 uint32_t instruction_timers[INSTRUCTION_TIMERS];
 uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
@@ -69,7 +68,7 @@ int main(void)
     while (1)
     {
         if(dirty){
-        	translateDurationAmount(RX_BUFFER);
+        	translateInstructionsAmount(RX_BUFFER);
         	dirty = 0;
         }
 
@@ -95,10 +94,15 @@ static void wait(int ms){
 }
 
 
-void translateDurationAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
-	uint32_t amount = ((RX_BUFFER[1]<<16) | (RX_BUFFER[2]<<8) | RX_BUFFER[3]);
+void translateInstructionsAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
+	uint32_t amount = 0;
+	for(int i = 1; i < MESSAGE_LEN; i++){
+		amount |= RX_BUFFER[i] << ((MESSAGE_LEN-1-i) * 8);
+	}
+
 	uint32_t current = get_ms();
 	uint32_t futureTime = current + amount;
+
 	switch(RX_BUFFER[0]){
 	case(FORWARD):
 		instruction_timers[LEFT_FORWARD_POSITION] = futureTime;

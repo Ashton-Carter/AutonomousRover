@@ -8,7 +8,7 @@
 #include "spi.h"
 
 uint8_t RX_BUFFER[MESSAGE_LEN] = {};
-uint8_t TX_BUFFER[MESSAGE_LEN] = {0xF1, 0xF2, 0xF3, 0xF4};
+uint8_t TX_BUFFER[MESSAGE_LEN] = {};
 
 volatile uint8_t buffer_idx = 0;
 static volatile uint8_t tx_idx = 0;

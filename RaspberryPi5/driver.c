@@ -63,6 +63,14 @@ int translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x
     return 1;
 }
 
+void inputSpiMessages(uint8_t fromSpi[SPI_BUFFER][SPI_LEN], int messages, targetingInformation* targetingInformation){
+    for(int i = 0; i < messages; ++i){
+        //Remove once we have SPI framing
+        targetingInformation->last_horizontal_position = (uint16_t)fromSpi[i][0] | ((uint16_t)fromSpi[i][1] << 8);
+        targetingInformation->last_vertical_position = (uint16_t)fromSpi[i][2] | ((uint16_t)fromSpi[i][3] << 8);
+    }
+}
+
 
 int main(){
     
@@ -136,6 +144,10 @@ int main(){
             messagesFromSPI++;
         }
 
+        if(messagesFromSPI > 0){
+            inputSpiMessages(fromSPIRecieve, messagesFromSPI, &targetingInformation);
+        }
+
         if(threadStatus.manualControl){
             unsigned int timeOffset;
             uint8_t command;
@@ -153,7 +165,7 @@ int main(){
                     targetingInformation.consequtive_classification_without_target++;
                 }
 
-                if (targetingInformation.consequtive_classification_without_target > 10){
+                if (targetingInformation.consequtive_classification_without_target > 10 && (targetingInformation.consequtive_classification_without_target % SCAN_CYCLE == 0)){
                     scan(&targetingInformation, toSPITransmission, &messagesToSPI);
     
                 }
