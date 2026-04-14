@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #define SPI_BITS 8
-#define SPI_LEN 4
+#define SPI_LEN 8
 #define SPI_SPEED 1000000
 #define CAMERA_UP 0x01
 #define CAMERA_DOWN 0x02

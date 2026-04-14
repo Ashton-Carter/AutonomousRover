@@ -10,7 +10,7 @@
 
 #include "stm32g4xx.h"
 
-#define MESSAGE_LEN 4
+#define MESSAGE_LEN 8
 extern uint8_t RX_BUFFER[MESSAGE_LEN];
 extern uint8_t TX_BUFFER[MESSAGE_LEN];
 

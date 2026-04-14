@@ -1,3 +1,4 @@
+"./Core/Src/hcsr04.o"
 "./Core/Src/main.o"
 "./Core/Src/pin_config.o"
 "./Core/Src/spi.o"

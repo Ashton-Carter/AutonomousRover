@@ -5,6 +5,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/hcsr04.c \
 ../Core/Src/main.c \
 ../Core/Src/pin_config.c \
 ../Core/Src/spi.c \
@@ -15,6 +16,7 @@ C_SRCS += \
 ../Core/Src/systick.c 
 
 OBJS += \
+./Core/Src/hcsr04.o \
 ./Core/Src/main.o \
 ./Core/Src/pin_config.o \
 ./Core/Src/spi.o \
@@ -25,6 +27,7 @@ OBJS += \
 ./Core/Src/systick.o 
 
 C_DEPS += \
+./Core/Src/hcsr04.d \
 ./Core/Src/main.d \
 ./Core/Src/pin_config.d \
 ./Core/Src/spi.d \
@@ -42,7 +45,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/pin_config.cyclo ./Core/Src/pin_config.d ./Core/Src/pin_config.o ./Core/Src/pin_config.su ./Core/Src/spi.cyclo ./Core/Src/spi.d ./Core/Src/spi.o ./Core/Src/spi.su ./Core/Src/stm32g4xx_it.cyclo ./Core/Src/stm32g4xx_it.d ./Core/Src/stm32g4xx_it.o ./Core/Src/stm32g4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32g4xx.cyclo ./Core/Src/system_stm32g4xx.d ./Core/Src/system_stm32g4xx.o ./Core/Src/system_stm32g4xx.su ./Core/Src/systick.cyclo ./Core/Src/systick.d ./Core/Src/systick.o ./Core/Src/systick.su
+	-$(RM) ./Core/Src/hcsr04.cyclo ./Core/Src/hcsr04.d ./Core/Src/hcsr04.o ./Core/Src/hcsr04.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/pin_config.cyclo ./Core/Src/pin_config.d ./Core/Src/pin_config.o ./Core/Src/pin_config.su ./Core/Src/spi.cyclo ./Core/Src/spi.d ./Core/Src/spi.o ./Core/Src/spi.su ./Core/Src/stm32g4xx_it.cyclo ./Core/Src/stm32g4xx_it.d ./Core/Src/stm32g4xx_it.o ./Core/Src/stm32g4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32g4xx.cyclo ./Core/Src/system_stm32g4xx.d ./Core/Src/system_stm32g4xx.o ./Core/Src/system_stm32g4xx.su ./Core/Src/systick.cyclo ./Core/Src/systick.d ./Core/Src/systick.o ./Core/Src/systick.su
 
 .PHONY: clean-Core-2f-Src
 

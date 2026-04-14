@@ -1,8 +1,7 @@
 ../Drivers/CMSIS/Include/core_cm4.h:1679:22:__NVIC_EnableIRQ	16	static,ignoring_inline_asm
-../Core/Src/spi.c:17:20:spi_write8	16	static
-../Core/Src/spi.c:21:23:spi_read8	16	static
-../Core/Src/spi.c:25:20:spi_prime_first_tx_byte	8	static
-../Core/Src/spi.c:30:6:set_tx_buffer	24	static
-../Core/Src/spi.c:37:6:spi_init	16	static
-../Core/Src/spi.c:101:6:SPI1_IRQHandler	24	static
-../Core/Src/spi.c:119:6:EXTI4_IRQHandler	8	static
+../Core/Src/spi.c:18:20:spi_write8	16	static
+../Core/Src/spi.c:22:23:spi_read8	16	static
+../Core/Src/spi.c:31:6:set_tx_buffer	16	static
+../Core/Src/spi.c:38:6:spi_init	16	static
+../Core/Src/spi.c:102:6:SPI1_IRQHandler	24	static,ignoring_inline_asm
+../Core/Src/spi.c:127:6:EXTI4_IRQHandler	4	static

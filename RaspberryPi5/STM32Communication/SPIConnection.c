@@ -50,18 +50,22 @@ void *SPIHandler(void *arg){
                 if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                     perror("MESSAGE FAILURE\n");
                 }
-                printf("TRASMITTED:%X, %X, %X, %X\n", transferBuffer[0], transferBuffer[1], transferBuffer[2], transferBuffer[3]);
+                printf("TRANSMITTED:");
+                for(int i = 0; i < SPI_LEN; ++i){
+                    printf("%X, ", transferBuffer[i]);
+                }
+                printf("\n");
                 if(arguments->recieveFreeIndex >= SPI_BUFFER){
                     printf("RECIEVE BUFFER OVERFLOW, OVERWRITING FROM INDEX 0\n");
                     arguments->recieveFreeIndex = 0;
                 }
                 memcpy(arguments->recieveBuffer[arguments->recieveFreeIndex], receiveBuffer, SPI_LEN);
 
-                printf("RECIEVED:%X, %X, %X, %X\n", 
-                    arguments->recieveBuffer[arguments->recieveFreeIndex][0], 
-                    arguments->recieveBuffer[arguments->recieveFreeIndex][1], 
-                    arguments->recieveBuffer[arguments->recieveFreeIndex][2], 
-                    arguments->recieveBuffer[arguments->recieveFreeIndex][3]);
+                printf("RECIEVED:");
+                for(int i = 0; i < SPI_LEN; ++i){
+                    printf("%X, ", arguments->recieveBuffer[arguments->recieveFreeIndex][i]);
+                }
+                printf("\n");
                 arguments->recieveFreeIndex++;
             }
             arguments->trasmissionFreeIndex = 0;
