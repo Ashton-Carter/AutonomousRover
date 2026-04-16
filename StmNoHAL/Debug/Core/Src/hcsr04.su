@@ -2,7 +2,7 @@
 ../Core/Src/hcsr04.c:15:13:hcsr04_delay_us	24	static,ignoring_inline_asm
 ../Core/Src/hcsr04.c:23:6:hcsr04_init	8	static
 ../Core/Src/hcsr04.c:47:5:hcsr04_start_measurement	8	static
-../Core/Src/hcsr04.c:61:6:hcsr04_handle_exti_irq	4	static
-../Core/Src/hcsr04.c:81:9:hcsr04_measurement_ready	4	static
-../Core/Src/hcsr04.c:85:10:hcsr04_get_pulse_width_us	4	static
-../Core/Src/hcsr04.c:89:10:hcsr04_get_distance_mm	4	static
+../Core/Src/hcsr04.c:67:6:hcsr04_handle_exti_irq	4	static
+../Core/Src/hcsr04.c:87:9:hcsr04_measurement_ready	4	static
+../Core/Src/hcsr04.c:91:10:hcsr04_get_pulse_width_us	4	static
+../Core/Src/hcsr04.c:95:10:hcsr04_get_distance_inches	4	static

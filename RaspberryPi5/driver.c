@@ -224,7 +224,7 @@ int main(){
         if(messagesFromSPI > 0){
             inputSpiMessages(fromSPIRecieve, messagesFromSPI, &targetingInformation);
             targetingInformation.stale = 0;
-            printf("HPWM:%i, VPWM:%i, DISTANCE(mm):%i\n", 
+            printf("HPWM:%i, VPWM:%i, DISTANCE(in):%i\n", 
                 targetingInformation.last_horizontal_position,
                 targetingInformation.last_vertical_position,
                 targetingInformation.distance

@@ -46,7 +46,13 @@ void hcsr04_init(void){
 
 int hcsr04_start_measurement(void){
 	if(hcsr04_state.waiting_for_fall){
-		return -1;
+		if((uint32_t)(TIM5->CNT - hcsr04_state.rising_edge_us) <= HC_SR04_ECHO_TIMEOUT_US){
+			return -1;
+		}
+
+		hcsr04_state.waiting_for_fall = 0;
+		hcsr04_state.measurement_ready = 0;
+		hcsr04_state.pulse_width_us = 0;
 	}
 
 	hcsr04_state.measurement_ready = 0;
@@ -86,6 +92,6 @@ uint32_t hcsr04_get_pulse_width_us(void){
 	return hcsr04_state.pulse_width_us;
 }
 
-uint32_t hcsr04_get_distance_mm(void){
-	return (hcsr04_state.pulse_width_us * 343U) / 2000U;
+uint32_t hcsr04_get_distance_inches(void){
+	return (hcsr04_state.pulse_width_us + 74U) / 148U;
 }

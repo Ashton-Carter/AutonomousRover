@@ -14,6 +14,7 @@ uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
 uint16_t verticalPeriod = VERTICAL_MIN_SERVO;
 uint16_t horizontalPeriod = MIDPOINT_SERVO;
 uint32_t distance = 0;
+static uint32_t next_hcsr04_measurement_ms = 0;
 
 int main(void)
 {
@@ -65,28 +66,32 @@ int main(void)
     // Max and Min for servo is more like 500 - 2500
 
 
-    uint32_t currentTime;
-    while (1)
-    {
-    	hcsr04_start_measurement();
-        if(dirty){
-        	translateInstructionsAmount(RX_BUFFER);
-        	dirty = 0;
-        }
+	    uint32_t currentTime;
+	    while (1)
+	    {
+	        currentTime = get_ms();
+	        if(currentTime >= next_hcsr04_measurement_ms){
+	        	hcsr04_start_measurement();
+	        	next_hcsr04_measurement_ms = currentTime + HC_SR04_MEASUREMENT_INTERVAL_MS;
+	        }
 
-        currentTime = get_ms();
-        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
-        	if(instruction_timers[i] > currentTime){
-        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 1);
+	        if(dirty){
+	        	translateInstructionsAmount(RX_BUFFER);
+	        	dirty = 0;
+	        }
+
+	        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
+	        	if(instruction_timers[i] > currentTime){
+	        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 1);
         	} else {
         		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
         	}
-        }
-        if(hcsr04_measurement_ready()){
-        	distance = hcsr04_get_pulse_width_us();
-        }
-        set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
-    }
+	        }
+	        if(hcsr04_measurement_ready()){
+	        	distance = hcsr04_get_distance_inches();
+	        }
+	        set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
+	    }
 }
 
 

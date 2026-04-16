@@ -41,7 +41,7 @@
 #define FIND_OBSTACLE 1
 #define FIND_OPEN_AREA 2
 #define VEHICLE_SCAN_AMOUNT ((360/POSSIBLE_ORIENTATIONS)*DEGREE_TO_TIME_TRANSLATION)
-#define DISTANCE_THRESHOLD 200
+#define DISTANCE_THRESHOLD 8
 #define FORWARD_MOVE_AMOUNT 100
 typedef struct {
     int consequtive_tracking_number;
