@@ -29,17 +29,37 @@
 #define SCAN_AMOUNT 100
 #define SCAN_CYCLE 3
 #define FIRE_LENGTH 150
-
+#define HORIZONTAL_START 0
+#define HORIZONTAL_END 2
+#define VERTICAL_START 2
+#define VERTICAL_END 4
+#define DISTANCE_START 4
+#define DISTANCE_END 8
+#define POSSIBLE_ORIENTATIONS 8
+#define DEGREE_TO_TIME_TRANSLATION 0
+#define NOT_SCANNING 0
+#define FIND_OBSTACLE 1
+#define FIND_OPEN_AREA 2
+#define VEHICLE_SCAN_AMOUNT ((360/POSSIBLE_ORIENTATIONS)*DEGREE_TO_TIME_TRANSLATION)
+#define DISTANCE_THRESHOLD 200
+#define FORWARD_MOVE_AMOUNT 100
 typedef struct {
-    uint16_t last_vertical_position;
-    uint16_t last_horizontal_position;
     int consequtive_tracking_number;
     int consequtive_classification_without_target;
+    int lastVehicleScan;
+    int vehicleDistanceScan[POSSIBLE_ORIENTATIONS];
+    int vehicleDistanceIndex;
+    uint32_t distance;
+    uint16_t last_vertical_position;
+    uint16_t last_horizontal_position;
     uint8_t currentScanHorizontal;
     uint8_t currentScanVertical;
+    uint8_t stale;
+    uint8_t currentVehicleScanMode;
+
 } targetingInformation;
 
-struct threadStatus{
+struct threadStatus {
     uint8_t manualControl;
     uint8_t manualConnectionStatus;
     uint8_t pythonCVConnectionStatus;

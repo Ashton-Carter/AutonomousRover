@@ -66,11 +66,83 @@ int translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x
 void inputSpiMessages(uint8_t fromSpi[SPI_BUFFER][SPI_LEN], int messages, targetingInformation* targetingInformation){
     for(int i = 0; i < messages; ++i){
         //Remove once we have SPI framing
-        targetingInformation->last_horizontal_position = (uint16_t)fromSpi[i][0] | ((uint16_t)fromSpi[i][1] << 8);
-        targetingInformation->last_vertical_position = (uint16_t)fromSpi[i][2] | ((uint16_t)fromSpi[i][3] << 8);
+        targetingInformation->last_horizontal_position = (uint16_t)fromSpi[i][0]<<8 | ((uint16_t)fromSpi[i][1]);
+        targetingInformation->last_vertical_position = (uint16_t)fromSpi[i][2]<<8 | ((uint16_t)fromSpi[i][3]);
+        targetingInformation->distance = 
+        (uint32_t)(fromSpi[i][4] << 24)|
+        (uint32_t)(fromSpi[i][5] << 16)|
+        (uint32_t)(fromSpi[i][6] << 8)|
+        (uint32_t)fromSpi[i][7];
     }
 }
 
+void moveAndResetMovementScan(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int* messagesToSPI){
+    int lowEnd = -1;
+    int highEnd = -1;
+    int bestLow = -1;
+    int bestHigh = -1;
+    for(int i = 0; i < POSSIBLE_ORIENTATIONS; ++i){
+        if(targetingInformation->vehicleDistanceScan[i] < DISTANCE_THRESHOLD){
+            if(highEnd-lowEnd > bestHigh-bestLow){
+                bestHigh = highEnd;
+                bestLow = lowEnd;
+            }
+            highEnd = -1;
+            lowEnd = -1;
+            continue;
+        }
+        if(lowEnd < 0){
+            lowEnd = i;
+        }
+        highEnd = i;
+    }
+    if(highEnd-lowEnd > bestHigh-bestLow){
+        bestHigh = highEnd;
+        bestLow = lowEnd;
+    }
+    int turnAmount = (bestHigh - ((bestHigh-bestLow)/2) ) * VEHICLE_SCAN_AMOUNT;
+    translateToBuffer(toSPITransmission[(*messagesToSPI)++], LEFT, turnAmount);
+    targetingInformation->currentVehicleScanMode=NOT_SCANNING;
+    targetingInformation->vehicleDistanceIndex=0;
+    targetingInformation->lastVehicleScan = targetingInformation->consequtive_classification_without_target;
+}
+
+void findTarget(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int* messagesToSPI){
+    scan(targetingInformation, toSPITransmission, messagesToSPI);
+    if(!targetingInformation->stale && ((targetingInformation->consequtive_classification_without_target - targetingInformation->lastVehicleScan) > 30)){
+        switch (targetingInformation->currentVehicleScanMode)
+        {
+        case NOT_SCANNING:
+            targetingInformation->currentVehicleScanMode = FIND_OBSTACLE;
+        case FIND_OBSTACLE:
+            if(targetingInformation->distance > DISTANCE_THRESHOLD){
+                translateToBuffer(toSPITransmission[(*messagesToSPI)++], FORWARD, FORWARD_MOVE_AMOUNT);
+            } else {
+                targetingInformation->currentVehicleScanMode = FIND_OPEN_AREA;
+            }
+            break;
+        case FIND_OPEN_AREA:
+            if(targetingInformation->vehicleDistanceIndex > 0){
+                targetingInformation->vehicleDistanceScan[targetingInformation->vehicleDistanceIndex-1] 
+                = targetingInformation->distance;
+            }
+            targetingInformation->vehicleDistanceIndex++;
+            if(targetingInformation->vehicleDistanceIndex >= POSSIBLE_ORIENTATIONS){
+                moveAndResetMovementScan(targetingInformation, toSPITransmission, messagesToSPI);
+                return;
+            }
+            translateToBuffer(toSPITransmission[(*messagesToSPI)++], LEFT, VEHICLE_SCAN_AMOUNT);
+        }
+    }
+}
+
+
+void resetScanningInformation(targetingInformation* targetingInformation){
+    targetingInformation->currentVehicleScanMode=NOT_SCANNING;
+    targetingInformation->vehicleDistanceIndex=0;
+    targetingInformation->lastVehicleScan=0;
+    targetingInformation->consequtive_classification_without_target = 0;
+}
 
 int main(){
     
@@ -87,7 +159,12 @@ int main(){
         .consequtive_tracking_number = 0,
         .consequtive_classification_without_target = 0,
         .currentScanHorizontal = CAMERA_LEFT,
-        .currentScanVertical = CAMERA_UP
+        .distance = 0,
+        .currentScanVertical = CAMERA_UP,
+        .vehicleDistanceIndex = 0,
+        .vehicleDistanceScan = {0},
+        .lastVehicleScan = 0,
+        .currentVehicleScanMode = NOT_SCANNING
     };
     SPIArguments spiArgs = {
         .trasmissionFreeIndex = 0,
@@ -138,36 +215,45 @@ int main(){
         messagesFromSPI = 0;
         messagesToSPI = 0;
         for(int i = 0; i < SPI_BUFFER; ++i){
-            if(recieveMessage(&spiArgs, fromSPIRecieve[i]) < 1){
+            if(recieveMessage(&spiArgs, fromSPIRecieve[i]) < 0){
                 break;
             }
-            messagesFromSPI++;
+            messagesFromSPI++; 
         }
 
         if(messagesFromSPI > 0){
             inputSpiMessages(fromSPIRecieve, messagesFromSPI, &targetingInformation);
+            targetingInformation.stale = 0;
+            printf("HPWM:%i, VPWM:%i, DISTANCE(mm):%i\n", 
+                targetingInformation.last_horizontal_position,
+                targetingInformation.last_vertical_position,
+                targetingInformation.distance
+            );
         }
 
         if(threadStatus.manualControl){
+            targetingInformation.vehicleDistanceIndex = 0;
             unsigned int timeOffset;
             uint8_t command;
             if (handleManualControl(&manArgs, &command, &timeOffset) < 1){
                 continue;
             }
             translateToBuffer(toSPITransmission[messagesToSPI++], command, timeOffset);
+            resetScanningInformation(&targetingInformation);
 
         } else {
             pthread_mutex_lock(&pythonArgs.pythonMutex);
             if(pythonArgs.changed){
                 if (pythonArgs.id){
-                    targetingInformation.consequtive_classification_without_target = 0;
+                    resetScanningInformation(&targetingInformation);
                 } else {
                     targetingInformation.consequtive_classification_without_target++;
                 }
 
+
+
                 if (targetingInformation.consequtive_classification_without_target > 10 && (targetingInformation.consequtive_classification_without_target % SCAN_CYCLE == 0)){
-                    scan(&targetingInformation, toSPITransmission, &messagesToSPI);
-    
+                    findTarget(&targetingInformation, toSPITransmission, &messagesToSPI);
                 }
 
                 if(translateOffsetToControlTimes(&pythonArgs, &x_command, &y_command, &x_offset_time, &y_offset_time, &targetingInformation)){
@@ -189,5 +275,6 @@ int main(){
         for (int i = messagesToSPI-1; i >= 0; --i) {
             sendMessage(&spiArgs, toSPITransmission[i]);
         }
+        targetingInformation.stale = 1;
     }
 }

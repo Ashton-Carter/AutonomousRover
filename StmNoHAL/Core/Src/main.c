@@ -3,7 +3,7 @@
 #include "spi.h"
 #include "systick.h"
 #include "globals.h"
-
+#include "hcsr04.h"
 
 static void wait(int ms);
 void translateInstructionsAmount(uint8_t RX_BUFFER[MESSAGE_LEN]);
@@ -13,6 +13,7 @@ uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
 
 uint16_t verticalPeriod = VERTICAL_MIN_SERVO;
 uint16_t horizontalPeriod = MIDPOINT_SERVO;
+uint32_t distance = 0;
 
 int main(void)
 {
@@ -54,8 +55,8 @@ int main(void)
     pin_init(GPIOB, SERVO2_PWM_OUTPUT, GPIO_ALTERNATIVE, 2);
     enable_timer(4, SERVO_PRESCALER, SERVO_ARR);
     set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
-    set_tx_buffer(horizontalPeriod, verticalPeriod);
     set_gpio_pin(GPIOC, LASER, 0);
+    hcsr04_init();
 
 //    set_gpio_pin(GPIOC, 10, 1);
 //    busy_wait(10000);
@@ -67,6 +68,7 @@ int main(void)
     uint32_t currentTime;
     while (1)
     {
+    	hcsr04_start_measurement();
         if(dirty){
         	translateInstructionsAmount(RX_BUFFER);
         	dirty = 0;
@@ -80,6 +82,10 @@ int main(void)
         		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
         	}
         }
+        if(hcsr04_measurement_ready()){
+        	distance = hcsr04_get_pulse_width_us();
+        }
+        set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
     }
 }
 
@@ -164,5 +170,6 @@ void translateInstructionsAmount(uint8_t RX_BUFFER[MESSAGE_LEN]){
 		set_pwm(VERTICAL_SERVO, verticalPeriod);
 		break;
 	}
-	set_tx_buffer(horizontalPeriod, verticalPeriod);
+//	set_tx_buffer(0x1234, 0x5678, 0x9ABCDEF1);
+//	set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
 }

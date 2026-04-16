@@ -19,7 +19,7 @@ extern volatile uint8_t dirty;
 
 
 void spi_init(SPI_TypeDef *spi);
-void set_tx_buffer(uint16_t horizontalPWM, uint16_t verticalPWM);
+void set_tx_buffer(uint16_t horizontalPWM, uint16_t verticalPWM, uint32_t distance);
 int spi_trasmit_recieve(uint8_t transmitBuffer[], uint8_t recieveBuffer[], uint8_t msgLen);
 
 #endif /* INC_SPI_H_ */

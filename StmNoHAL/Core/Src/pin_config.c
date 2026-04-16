@@ -53,6 +53,12 @@ void pin_init(GPIO_TypeDef *port, uint8_t pin, uint8_t mode, uint8_t alternative
 
 }
 
+void pin_init_input(GPIO_TypeDef *port, uint8_t pin, uint8_t pull_mode){
+	pin_init(port, pin, GPIO_INPUT, 0);
+	port->PUPDR &= ~(3U << (2 * pin));
+	port->PUPDR |= ((uint32_t)pull_mode << (2 * pin));
+}
+
 void set_gpio_pin(GPIO_TypeDef *port, uint8_t pin, uint8_t val){
 	//if value is 0, set pin to LOW and return
 
@@ -92,4 +98,3 @@ void enable_timer(uint8_t timer, uint8_t prescaler, uint16_t arr){
 void set_pwm(TIM_TypeDef *timer, uint16_t period){
 		timer->CCR1 = period;
 }
-

@@ -6,8 +6,8 @@
 
 typedef struct{
     int port;
-    uint8_t command;
     int amount;
+    uint8_t command;
     uint8_t changed;
 }manualControlArgs;
 
