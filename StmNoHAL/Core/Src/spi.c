@@ -10,13 +10,11 @@
 
 uint8_t RX_BUFFER[MESSAGE_LEN] = {};
 uint8_t TX_BUFFER[MESSAGE_LEN] = {};
-uint8_t transmitInterupts = 0;
 
 volatile uint8_t buffer_idx = 0;
-static volatile uint8_t tx_idx = 0;
 volatile uint8_t dirty = 0;
 
-static inline void spi_write8(SPI_TypeDef *spi, uint8_t value){
+static inline void spi_write32(SPI_TypeDef *spi, uint8_t value){
 	*(__IO uint8_t *)&spi->DR = value;
 }
 

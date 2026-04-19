@@ -70,6 +70,16 @@ int main(void)
 	    while (1)
 	    {
 	        currentTime = get_ms();
+	        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
+				if(instruction_timers[i] > currentTime){
+					set_gpio_pin(GPIOC, index_to_gpio_pin[i], 1);
+				} else {
+					set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
+				}
+			}
+	        if(!dirty){
+	        	continue;
+	        }
 	        if(currentTime >= next_hcsr04_measurement_ms){
 	        	hcsr04_start_measurement();
 	        	next_hcsr04_measurement_ms = currentTime + HC_SR04_MEASUREMENT_INTERVAL_MS;
@@ -80,13 +90,6 @@ int main(void)
 	        	dirty = 0;
 	        }
 
-	        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
-	        	if(instruction_timers[i] > currentTime){
-	        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 1);
-        	} else {
-        		set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
-        	}
-	        }
 	        if(hcsr04_measurement_ready()){
 	        	distance = hcsr04_get_distance_inches();
 	        }

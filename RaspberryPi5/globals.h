@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #define SPI_BITS 8
-#define SPI_LEN 8
+#define SPI_LEN 4
 #define SPI_SPEED 1000000
 #define CAMERA_UP 0x01
 #define CAMERA_DOWN 0x02
@@ -17,6 +17,7 @@
 #define BACK 0x08
 #define CLOSE 0x09
 #define FIRE 0x0A
+#define RESET 0xFF
 #define MANUAL_CONTROL_PORT 8000
 #define UNIX_DOMAIN_SOCKET_PATH "/tmp/rover.sock"
 #define SPI_BUFFER 10
@@ -36,26 +37,32 @@
 #define DISTANCE_START 4
 #define DISTANCE_END 8
 #define POSSIBLE_ORIENTATIONS 8
-#define DEGREE_TO_TIME_TRANSLATION 0
+#define DEGREE_TO_TIME_TRANSLATION (4200/360)
 #define NOT_SCANNING 0
 #define FIND_OBSTACLE 1
 #define FIND_OPEN_AREA 2
 #define VEHICLE_SCAN_AMOUNT ((360/POSSIBLE_ORIENTATIONS)*DEGREE_TO_TIME_TRANSLATION)
-#define DISTANCE_THRESHOLD 8
-#define FORWARD_MOVE_AMOUNT 100
+#define DISTANCE_THRESHOLD 15
+#define FORWARD_MOVE_AMOUNT 500
+#define SCANNING_THROTTLE_AMOUNT 5
+#define DISTANCE_CAP 10000
+#define SERVO_CAP 10000
+
+
 typedef struct {
     int consequtive_tracking_number;
     int consequtive_classification_without_target;
     int lastVehicleScan;
     int vehicleDistanceScan[POSSIBLE_ORIENTATIONS];
     int vehicleDistanceIndex;
-    uint32_t distance;
+    uint32_t scanningThrottle;
     uint16_t last_vertical_position;
     uint16_t last_horizontal_position;
+    uint8_t distance;
     uint8_t currentScanHorizontal;
     uint8_t currentScanVertical;
-    uint8_t stale;
     uint8_t currentVehicleScanMode;
+    
 
 } targetingInformation;
 
