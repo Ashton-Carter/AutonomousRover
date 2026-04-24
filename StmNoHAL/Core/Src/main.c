@@ -14,7 +14,7 @@ uint32_t index_to_gpio_pin[INSTRUCTION_TIMERS];
 uint16_t verticalPeriod = VERTICAL_MIN_SERVO;
 uint16_t horizontalPeriod = MIDPOINT_SERVO;
 uint32_t distance = 0;
-static uint32_t next_hcsr04_measurement_ms = 0;
+uint8_t waitingForResponse = 0;
 
 int main(void)
 {
@@ -58,6 +58,7 @@ int main(void)
     set_pwm(HORIZONTAL_SERVO, horizontalPeriod);
     set_gpio_pin(GPIOC, LASER, 0);
     hcsr04_init();
+    set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
 
 //    set_gpio_pin(GPIOC, 10, 1);
 //    busy_wait(10000);
@@ -69,6 +70,8 @@ int main(void)
 	    uint32_t currentTime;
 	    while (1)
 	    {
+
+			hcsr04_start_measurement();
 	        currentTime = get_ms();
 	        for(int i = 0; i < INSTRUCTION_TIMERS; ++i){
 				if(instruction_timers[i] > currentTime){
@@ -77,23 +80,21 @@ int main(void)
 					set_gpio_pin(GPIOC, index_to_gpio_pin[i], 0);
 				}
 			}
+	        if(hcsr04_measurement_ready()){
+				distance = hcsr04_get_distance_inches();
+			}
+
 	        if(!dirty){
 	        	continue;
 	        }
-	        if(currentTime >= next_hcsr04_measurement_ms){
-	        	hcsr04_start_measurement();
-	        	next_hcsr04_measurement_ms = currentTime + HC_SR04_MEASUREMENT_INTERVAL_MS;
-	        }
 
-	        if(dirty){
-	        	translateInstructionsAmount(RX_BUFFER);
-	        	dirty = 0;
-	        }
 
-	        if(hcsr04_measurement_ready()){
-	        	distance = hcsr04_get_distance_inches();
-	        }
+
+	      	translateInstructionsAmount(RX_BUFFER);
+
 	        set_tx_buffer(horizontalPeriod, verticalPeriod, distance);
+
+	        dirty = 0;
 	    }
 }
 

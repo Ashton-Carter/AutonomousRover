@@ -16,12 +16,7 @@ struct threadStatus threadStatus= {
     .pythonCVConnectionStatus = 0
 };
 
-void translateToBuffer(uint8_t buffer[SPI_LEN], uint8_t command, unsigned int time_offset){
-    buffer[0] = command;
-    for(int i = SPI_LEN-1; i>=1; --i){
-        buffer[SPI_LEN-i] = ((time_offset >> ((i-1)*8)) & 0xFF);
-    }
-}
+
 
 void scan(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int *messagesToSPI){
     if(targetingInformation->last_horizontal_position > HORIZONTAL_MAX_SERVO - (HORIZONTAL_TIME_SCALER/2)){
@@ -63,24 +58,13 @@ int translateOffsetToControlTimes(struct pythonIPCStruct* pythonArgs, uint8_t* x
     return 1;
 }
 
-void inputSpiMessages(uint8_t fromSpi[SPI_BUFFER][SPI_LEN], int messages, targetingInformation* targetingInformation){
-    for(int i = 0; i < messages; ++i){
-        //Remove once we have SPI framing
-        targetingInformation->last_horizontal_position = (uint16_t)fromSpi[i][0]<<8 | ((uint16_t)fromSpi[i][1]);
-        targetingInformation->last_vertical_position = (uint16_t)fromSpi[i][2]<<8 | ((uint16_t)fromSpi[i][3]);
-        targetingInformation->distance = 
-        (uint32_t)(fromSpi[i][4] << 24)|
-        (uint32_t)(fromSpi[i][5] << 16)|
-        (uint32_t)(fromSpi[i][6] << 8)|
-        (uint32_t)fromSpi[i][7];
-    }
-}
 
 void moveAndResetMovementScan(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int* messagesToSPI){
     int lowEnd = -1;
     int highEnd = -1;
-    int bestLow = -1;
-    int bestHigh = -1;
+    int bestLow = POSSIBLE_ORIENTATIONS/2;
+    int bestHigh = POSSIBLE_ORIENTATIONS/2;
+    uint8_t direction;
     for(int i = 0; i < POSSIBLE_ORIENTATIONS; ++i){
         if(targetingInformation->vehicleDistanceScan[i] < DISTANCE_THRESHOLD){
             if(highEnd-lowEnd > bestHigh-bestLow){
@@ -100,10 +84,15 @@ void moveAndResetMovementScan(targetingInformation *targetingInformation, uint8_
         bestHigh = highEnd;
         bestLow = lowEnd;
     }
-    
-    int turnAmount = (bestHigh - ((bestHigh-bestLow)/2) ) * VEHICLE_SCAN_AMOUNT;
+    int index = bestHigh - ((bestHigh-bestLow)/2);
+    if(index>=POSSIBLE_ORIENTATIONS/2){
+        direction = RIGHT;
+    } else {
+        direction = LEFT;
+    }
+    int turnAmount = index * VEHICLE_SCAN_AMOUNT;
     printf("MOVING TO LOCATION:%i BY TURNING:%i\n", bestHigh - ((bestHigh-bestLow)/2), turnAmount);
-    translateToBuffer(toSPITransmission[(*messagesToSPI)++], LEFT, turnAmount);
+    translateToBuffer(toSPITransmission[(*messagesToSPI)++], direction, turnAmount);
     targetingInformation->currentVehicleScanMode=NOT_SCANNING;
     targetingInformation->vehicleDistanceIndex=0;
     targetingInformation->lastVehicleScan = targetingInformation->consequtive_classification_without_target;
@@ -111,7 +100,7 @@ void moveAndResetMovementScan(targetingInformation *targetingInformation, uint8_
 
 void findTarget(targetingInformation *targetingInformation, uint8_t toSPITransmission[SPI_BUFFER][SPI_LEN], int* messagesToSPI){
     scan(targetingInformation, toSPITransmission, messagesToSPI);
-    if(((targetingInformation->consequtive_classification_without_target - targetingInformation->lastVehicleScan) > 10)){
+    if(((targetingInformation->consequtive_classification_without_target - targetingInformation->lastVehicleScan) > SCANS_BEFORE_FIND_AREA)){
         switch (targetingInformation->currentVehicleScanMode)
         {
         case NOT_SCANNING:
@@ -126,22 +115,24 @@ void findTarget(targetingInformation *targetingInformation, uint8_t toSPITransmi
             break;
         case FIND_OPEN_AREA:
             targetingInformation->scanningThrottle++;
-            if(targetingInformation->scanningThrottle % SCANNING_THROTTLE_AMOUNT){
-                return;
-            }
+            // if(targetingInformation->scanningThrottle % SCANNING_THROTTLE_AMOUNT){
+            //     return;
+            // }
             printf("LOCATION: %i, DISTANCE: %i\n", targetingInformation->vehicleDistanceIndex, targetingInformation->distance);
             if(targetingInformation->vehicleDistanceIndex > 0){
-                printf("STARTING FIND OPEN AREA\n");
                 targetingInformation->vehicleDistanceScan[targetingInformation->vehicleDistanceIndex-1] 
                 = targetingInformation->distance;
+            } else {
+                printf("STARTING FIND OPEN AREA\n");
             }
             targetingInformation->vehicleDistanceIndex++;
             if(targetingInformation->vehicleDistanceIndex >= POSSIBLE_ORIENTATIONS){
-                moveAndResetMovementScan(targetingInformation, toSPITransmission, messagesToSPI);
                 printf("OPEN AREA LOCATED\n");
+                moveAndResetMovementScan(targetingInformation, toSPITransmission, messagesToSPI);
                 return;
             }
             translateToBuffer(toSPITransmission[(*messagesToSPI)++], LEFT, VEHICLE_SCAN_AMOUNT);
+            break;
         }
     }
 }
@@ -235,7 +226,7 @@ int main(){
 
         if(messagesFromSPI > 0){
             inputSpiMessages(fromSPIRecieve, messagesFromSPI, &targetingInformation);
-            // printf("HPWM:%i, VPWM:%i, DISTANCE(in):%i\n", 
+            // printf("HPWM:%u, VPWM:%u, DISTANCE(in):%u\n", 
             //     targetingInformation.last_horizontal_position,
             //     targetingInformation.last_vertical_position,
             //     targetingInformation.distance
@@ -256,6 +247,7 @@ int main(){
             pthread_mutex_lock(&pythonArgs.pythonMutex);
             if(pythonArgs.changed){
                 if (pythonArgs.id){
+                    printf("TARGET RECIEVED\n");
                     resetScanningInformation(&targetingInformation);
                 } else {
                     targetingInformation.consequtive_classification_without_target++;

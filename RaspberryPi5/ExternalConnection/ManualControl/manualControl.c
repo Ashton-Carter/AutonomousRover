@@ -84,38 +84,40 @@ void *socket_lifecycle(void *arg) {
                 printf("SWITCHING TO AUTONOMOUS CONTROL\n");
                 break;
             } 
-            if (command == 'm') {
+            else if (command == 'm') {
                 if(buf[1]=='F'){
                     args->command = FORWARD;
                 }
-                if(buf[1]=='L'){
+                else if(buf[1]=='L'){
                     args->command = LEFT;
                 }
-                if(buf[1]=='R'){
+                else if(buf[1]=='R'){
                     args->command = RIGHT;
                 }
-                if(buf[1]=='B'){
+                else if(buf[1]=='B'){
                     args->command = BACK;
                 }
+                args->amount = 150;
             }
-            if (command == 'f'){
+            else if (command == 'f'){
                 args->command = FIRE;
+                args->amount = 150;
             }
-            if (command == 'l'){
+            else if (command == 'l'){
                 if(buf[1]=='U'){
                     args->command = CAMERA_UP;
                 }
-                if(buf[1]=='L'){
+                else if(buf[1]=='L'){
                     args->command = CAMERA_LEFT;
                 }
-                if(buf[1]=='R'){
+                else if(buf[1]=='R'){
                     args->command = CAMERA_RIGHT;
                 }
-                if(buf[1]=='D'){
+                else if(buf[1]=='D'){
                     args->command = CAMERA_DOWN;
                 }
+                args->amount = 25;
             }
-            args->amount = 50;
             args->changed = 1;
         }
 

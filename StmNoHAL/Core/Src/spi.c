@@ -9,34 +9,30 @@
 #include "globals.h"
 
 uint8_t RX_BUFFER[MESSAGE_LEN] = {};
-uint8_t TX_BUFFER[MESSAGE_LEN] = {};
+uint8_t TX_BUFFER[MESSAGE_LEN] = {0x11, 0x22, 0x33, 0x44};
+uint8_t transmitInterupts = 0;
 
 volatile uint8_t buffer_idx = 0;
+static volatile uint32_t tx_idx = 0;
 volatile uint8_t dirty = 0;
 
-static inline void spi_write32(SPI_TypeDef *spi, uint8_t value){
+static inline void spi_write8(SPI_TypeDef *spi, uint8_t value){
 	*(__IO uint8_t *)&spi->DR = value;
 }
+
 
 static inline uint8_t spi_read8(SPI_TypeDef *spi){
 	return *(__IO uint8_t *)&spi->DR;
 }
 
-// static inline void spi_prime_first_tx_byte(void){
-// 	tx_idx = 1;
-// 	spi_write8(SPI1, TX_BUFFER[0]);
-// }
 
-void set_tx_buffer(uint16_t horizontalPWM, uint16_t verticalPWM, uint32_t distance){
-	for(int i = HORIZONTAL_START; i < HORIZONTAL_END; ++i){
-		TX_BUFFER[i] = (horizontalPWM >> ((HORIZONTAL_END-1-i) * 8)) & 0xFF;
-	}
-	for(int i = VERTICAL_START; i < VERTICAL_END; ++i){
-		TX_BUFFER[i] = (verticalPWM >> ((VERTICAL_END-1-i) * 8)) & 0xFF;
-	}
-	for(int i = DISTANCE_START; i < DISTANCE_END; ++i){
-		TX_BUFFER[i] = (distance >> ((DISTANCE_END-1-i) * 8)) & 0xFF;
-	}
+void set_tx_buffer(uint16_t horizontalPWM, uint16_t verticalPWM, uint8_t distance){
+
+	spi_write8(SPI1, (uint8_t) ((horizontalPWM & 0xFF0) >> 4));
+	spi_write8(SPI1, (uint8_t) (((horizontalPWM & 0x00F) << 4) | ((verticalPWM & 0xF00) >> 8)));
+	spi_write8(SPI1, (uint8_t) (verticalPWM & 0xFF));
+	spi_write8(SPI1, (uint8_t) (distance));
+
 }
 
 void spi_init(SPI_TypeDef *spi){
@@ -47,7 +43,6 @@ void spi_init(SPI_TypeDef *spi){
 	pin_init(GPIOA, 7, GPIO_ALTERNATIVE, 5);
 
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
-//	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
 	// Disable SPI for config
 	spi->CR1 &= ~SPI_CR1_SPE;
@@ -87,32 +82,32 @@ void spi_init(SPI_TypeDef *spi){
 
 	// Enable recieve interrupt
 	spi->CR2 |= SPI_CR2_RXNEIE;
-	spi->CR2 |= SPI_CR2_TXEIE;
+//	spi->CR2 |= SPI_CR2_TXEIE;
 
-//	SYSCFG->EXTICR[1] &= ~SYSCFG_EXTICR2_EXTI4;
-//	EXTI->IMR1 |= EXTI_IMR1_IM4;
-//	EXTI->RTSR1 |= EXTI_RTSR1_RT4;
-//	EXTI->FTSR1 |= EXTI_FTSR1_FT4;
-//	EXTI->PR1 = EXTI_PR1_PIF4;
 
 	// Enable SPI
 	spi->CR1 |= SPI_CR1_SPE;
-//	NVIC_EnableIRQ(EXTI4_IRQn);
+
 	NVIC_EnableIRQ(SPI1_IRQn);
 	buffer_idx = 0;
-	// spi_prime_first_tx_byte();
 }
 
 void SPI1_IRQHandler(void){
 	uint32_t sr = SPI1->SR;
 
-	if(sr & SPI_SR_TXE){
-		transmitInterupts++;
-		spi_write8(SPI1, TX_BUFFER[tx_idx]);
-		tx_idx = (tx_idx + 1) % MESSAGE_LEN;
-	}
+//	if(sr & SPI_SR_TXE){
+//		transmitInterupts++;
+//		spi_write8(SPI1, TX_BUFFER[tx_idx]);
+//		tx_idx = (tx_idx + 1) % MESSAGE_LEN;
+//	}
 
 	if(sr & SPI_SR_UDR){
+		__asm__("nop");
+		__asm__("nop");
+		__asm__("nop");
+	}
+
+	if(sr & SPI_SR_OVR){
 		__asm__("nop");
 		__asm__("nop");
 		__asm__("nop");
@@ -128,15 +123,4 @@ void SPI1_IRQHandler(void){
 	}
 }
 
-//void EXTI4_IRQHandler(void){
-//	if(!(EXTI->PR1 & EXTI_PR1_PIF4)){
-//		return;
-//	}
-//
-//	EXTI->PR1 = EXTI_PR1_PIF4;
-//
-//	// if(!(GPIOA->IDR & (1U << 4))){
-//	// 	buffer_idx = 0;
-//	//  spi_prime_first_tx_byte();
-//	// }
-//}
+

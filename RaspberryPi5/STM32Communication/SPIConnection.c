@@ -20,9 +20,9 @@ void translateToBuffer(uint8_t buffer[SPI_LEN], uint8_t command, unsigned int ti
 void inputSpiMessages(uint8_t fromSpi[SPI_BUFFER][SPI_LEN], int messages, targetingInformation* targetingInformation){
     for(int i = 0; i < messages; ++i){
         uint32_t incomingMessage = 
-        targetingInformation->last_horizontal_position = fromSpi[i][0]<<4 | ((uint16_t)fromSpi[i][1] >> 4);
+        targetingInformation->last_horizontal_position = (fromSpi[i][0]<<4) | (((uint16_t)fromSpi[i][1] & 0xF0) >> 4);
         targetingInformation->last_vertical_position = (fromSpi[i][1] & 0x0F) << 8 | fromSpi[i][2];
-        targetingInformation->distance = fromSpi[3];
+        targetingInformation->distance = fromSpi[i][3];
     }
 }
 
@@ -90,22 +90,22 @@ void *SPIHandler(void *arg){
                 if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
                     perror("MESSAGE FAILURE\n");
                 }
-                printf("TRANSMITTED:");
-                for(int i = 0; i < SPI_LEN; ++i){
-                    printf("%X, ", transferBuffer[i]);
-                }
-                printf("\n");
+                // printf("TRANSMITTED:");
+                // for(int i = 0; i < SPI_LEN; ++i){
+                //     printf("%X, ", transferBuffer[i]);
+                // }
+                // printf("\n");
                 if(arguments->recieveFreeIndex >= SPI_BUFFER){
                     printf("RECIEVE BUFFER OVERFLOW, OVERWRITING FROM INDEX 0\n");
                     arguments->recieveFreeIndex = 0;
                 }
                 memcpy(arguments->recieveBuffer[arguments->recieveFreeIndex], receiveBuffer, SPI_LEN);
 
-                printf("RECIEVED:");
-                for(int i = 0; i < SPI_LEN; ++i){
-                    printf("%X, ", arguments->recieveBuffer[arguments->recieveFreeIndex][i]);
-                }
-                printf("\n");
+                // printf("RECIEVED:");
+                // for(int i = 0; i < SPI_LEN; ++i){
+                //     printf("%X, ", arguments->recieveBuffer[arguments->recieveFreeIndex][i]);
+                // }
+                // printf("\n");
                 // if(checkAndResetSPI(arguments->recieveBuffer[arguments->recieveFreeIndex])){
                 //     sendResetMessage(fd, &tr, transferBuffer);
                 // }
