@@ -1,5 +1,5 @@
 # Autonomous Rover
-For video of the rover see my LinkedIn Post: 
+For video of the rover see my LinkedIn Post: https://www.linkedin.com/posts/ashton-carter-2ba9a5258_just-finished-up-a-project-i-have-been-working-ugcPost-7453266788668067840-lli2?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD-BuW4B5wY9nAgGSVYk78KAXrCJOmdTRuY
 ## Overview
 
 Autonomous rover to scan for drones and fire a laser at them.  Automated scanning logic and a manual override from a remote connection.
